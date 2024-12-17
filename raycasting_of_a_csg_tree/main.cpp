@@ -6,6 +6,8 @@
 #include <imgui_internal.h>
 #include <imgui.h>
 
+#include <glm/glm.hpp>
+
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
