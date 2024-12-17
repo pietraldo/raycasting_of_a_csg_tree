@@ -1,121 +1,191 @@
-﻿#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-#include <imgui_internal.h>
-#include <imgui.h>
-
-#include <glm/glm.hpp>
-
+﻿
 #include <iostream>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include <vector>
 
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+
+
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
+#include "kernels.cuh"
+
+// Function declarations
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow* window);
+int createWindow(GLFWwindow*& window);
+void InitImGui(GLFWwindow* window);
 
-// settings
+
+// Screen dimensions
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 
-void InitImGui(GLFWwindow* window) {
-    // 1. Create ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); // You can access IO for settings
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable keyboard controls (optional)
-
-    // 2. Initialize ImGui backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true); // Initialize for GLFW
-    ImGui_ImplOpenGL3_Init("#version 330");     // OpenGL version (change to your GLSL version)
-}
-void RenderImGui(int fps) {
-    // Start a new ImGui frame
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+struct Texture {
+    GLuint id;
+    int width;
+    int height;
+    int channels;
+    std::vector<unsigned char> data;
+};
 
 
-    ImGui::Begin("Fish settings");
-    ImGui::Text("Fps: %d", fps);
-   
-    ImGui::End();
+Texture CreateTexture() {
 
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    Texture texture;
+    texture.channels = 3;
+    texture.width = SCR_WIDTH;
+    texture.height = SCR_HEIGHT;
+    texture.data = std::vector<unsigned char>(SCR_WIDTH * SCR_HEIGHT * texture.channels, 200);
+
+    return texture;
 }
 
-int main()
-{
-    // glfw: initialize and configure
-    // ------------------------------
-    glfwInit();
+void RegisterTexture(Texture& texture) {
+    // Generate and bind the texture
+    glGenTextures(1, &texture.id);
+    glBindTexture(GL_TEXTURE_2D, texture.id);
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // Determine the appropriate OpenGL format
+    GLenum format = (texture.channels == 3) ? GL_RGB : GL_RGBA;
+
+    // Upload texture data to the GPU
+    glTexImage2D(GL_TEXTURE_2D, 0, format, texture.width, texture.height, 0, format, GL_UNSIGNED_BYTE, texture.data.data());
+
+    // Unbind texture
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
+
+
+// Main function
+int main() {
+
+    GLFWwindow* window;
+    if (createWindow(window) == -1) {
+        return -1;
+    }
+    InitImGui(window);
+
+    Texture texture = CreateTexture();
+    RegisterTexture(texture);
+
+    unsigned char* dev_texture_data;
+    cudaMalloc(&dev_texture_data, sizeof(unsigned char) * texture.data.size());
+    cudaMemcpy(dev_texture_data, texture.data.data(), sizeof(unsigned char) * texture.data.size(), cudaMemcpyHostToDevice);
+
+
+    auto last = glfwGetTime();
+    while (!glfwWindowShouldClose(window)) {
+
+        // generate texture in cuda
+        UpdateTextureOnGPU(dev_texture_data);
+
+        // copy to opengl
+        cudaMemcpy(texture.data.data(), dev_texture_data, sizeof(unsigned char) * texture.data.size(), cudaMemcpyDeviceToHost);
+        glBindTexture(GL_TEXTURE_2D, texture.id);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, texture.data.data());
+
+
+        // Start ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Render ImGui window
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImVec2 m_WindowSize = ImVec2(SCR_WIDTH, SCR_HEIGHT);
+        ImGui::SetNextWindowSize(m_WindowSize);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
+        ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImVec2 m_ViewportSize = ImGui::GetContentRegionAvail();
+        ImGui::Image((ImTextureID)(uintptr_t)texture.id, m_ViewportSize, { 0, 1 }, { 1, 0 });
+        ImGui::End();
+        ImGui::PopStyleVar();
+
+        // Render ImGui data
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Swap buffers and poll event
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+
+        auto time = glfwGetTime();
+        std::cout << 1 / (time - last) << std::endl;
+        last = time;
+    }
+
+
+
+
+
+    return 0;
+}
+
+
+// Function definitions
+
+// Callback for window resizing
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
+// Create a GLFW window and set up OpenGL context
+int createWindow(GLFWwindow*& window) {
+    // Initialize GLFW
+    if (!glfwInit()) {
+        std::cerr << "Failed to initialize GLFW\n";
+        return -1;
+    }
+
+    // Configure GLFW
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-
-    // glfw window creation
-    // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
+    // Create window
+    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Texture Viewer", NULL, NULL);
+    if (!window) {
+        std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
         return -1;
     }
+
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-	InitImGui(window);
-
-    // glad: load all OpenGL function pointers
-    // ---------------------------------------
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
+    // Load OpenGL functions using GLAD
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cerr << "Failed to initialize GLAD\n";
         return -1;
     }
 
-    // render loop
-    // -----------
-    while (!glfwWindowShouldClose(window))
-    {
-        // input
-        // -----
-        processInput(window);
-		
-
-        // render
-        // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        RenderImGui(60);
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
-    glfwTerminate();
     return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow* window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+// Initialize ImGui
+void InitImGui(GLFWwindow* window) {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    // Initialize backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    // make sure the viewport matches the new window dimensions; note that width and 
-    // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
-}
