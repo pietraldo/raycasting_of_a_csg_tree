@@ -1,12 +1,5 @@
-﻿# CMakeList.txt: projekt CMake dla elementu raycasting_of_a_csg_tree, dołącz źródło i zdefiniuj
-# tutaj logikę specyficzną dla projektu.
-#
+﻿add_executable (raycasting_of_a_csg_tree "main.cpp")
 
-# Dodaj źródło do pliku wykonywalnego tego projektu.
-add_executable (raycasting_of_a_csg_tree "raycasting_of_a_csg_tree.cpp" "raycasting_of_a_csg_tree.h")
+target_include_directories(raycasting_of_a_csg_tree PRIVATE ${CMAKE_SOURCE_DIR}/raycasting_of_a_csg_tree)
+target_link_libraries(raycasting_of_a_csg_tree glfw glad)
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET raycasting_of_a_csg_tree PROPERTY CXX_STANDARD 20)
-endif()
-
-# TODO: Dodaj testy i zainstaluj elementy docelowe w razie potrzeby.
