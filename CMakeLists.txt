@@ -2,7 +2,7 @@
 
 
 
-project(Raycasting LANGUAGES CUDA CXX C)
+project(raycasting_of_a_csg_tree LANGUAGES CUDA CXX C)
 
 add_subdirectory(raycasting_of_a_csg_tree)
 add_subdirectory(externals/glfw)
