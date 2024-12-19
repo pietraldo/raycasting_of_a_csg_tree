@@ -151,6 +151,10 @@ void processInput(GLFWwindow* window)
 		camera.x -= 0.1f;
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		camera.x += 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+		angle += 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+		angle -= 0.1f;
 }
 
 // Callback for window resizing

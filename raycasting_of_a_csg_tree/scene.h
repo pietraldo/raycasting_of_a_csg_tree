@@ -33,9 +33,14 @@ float remap(float a, float b, float t)
 	return (t - a) / (b - a);
 }
 vec3 camera = vec3(0, 0, 0);
+float angle = 0;
 void UpdateTextureCpu(Texture& texture)
 {
 	int distance = 400;
+
+	mat3 rotation = mat3(cos(angle), 0, sin(angle), 0, 1, 0, -sin(angle), 0, cos(angle));
+
+	
 
 	vector<Sphere> spheres;
 	spheres.push_back({ vec3(0, 0, 7), 1.0f });
@@ -51,6 +56,7 @@ void UpdateTextureCpu(Texture& texture)
 			{
 				vec3 ray = vec3(i - 400, j - 300, distance);
 				ray = normalize(ray);
+				ray = rotation * ray;
 
 				float t = dot(spheres[k].position - camera, ray);
 				vec3 p = camera + t * ray;
