@@ -13,11 +13,13 @@
 #include <device_launch_parameters.h>
 
 #include "kernels.cuh"
+#include "scene.h"
 
 // Function declarations
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 int createWindow(GLFWwindow*& window);
 void InitImGui(GLFWwindow* window);
+void processInput(GLFWwindow* window);
 
 
 // Screen dimensions
@@ -25,13 +27,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 
-struct Texture {
-    GLuint id;
-    int width;
-    int height;
-    int channels;
-    std::vector<unsigned char> data;
-};
+
 
 
 Texture CreateTexture() {
@@ -89,11 +85,15 @@ int main() {
     auto last = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
 
+		processInput(window);
+
+        UpdateTextureCpu(texture);
+
         // generate texture in cuda
-        UpdateTextureOnGPU(dev_texture_data);
+        //UpdateTextureOnGPU(dev_texture_data);
+        //cudaMemcpy(texture.data.data(), dev_texture_data, sizeof(unsigned char) * texture.data.size(), cudaMemcpyDeviceToHost);
 
         // copy to opengl
-        cudaMemcpy(texture.data.data(), dev_texture_data, sizeof(unsigned char) * texture.data.size(), cudaMemcpyDeviceToHost);
         glBindTexture(GL_TEXTURE_2D, texture.id);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, texture.data.data());
 
@@ -138,6 +138,20 @@ int main() {
 
 
 // Function definitions
+
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		camera.z += 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		camera.z -= 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		camera.x -= 0.1f;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		camera.x += 0.1f;
+}
 
 // Callback for window resizing
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
