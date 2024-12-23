@@ -43,21 +43,16 @@ struct Camera
 	float pitch = 0;
 };
 
-
-
-Camera camera = { vec3(0, 0, 0), vec3(0, 0, -1) };
-float angleY = 0;
-float angleX = 0;
+Camera camera = { vec3(0, 0, 2), vec3(0, 0, 1) };
 void UpdateTextureCpu(Texture& texture)
 {
-	//angle += 10;
-	camera.direction = normalize(camera.direction);
-
-	float distance = SCR_WIDTH / 4;
+	float distance = SCR_WIDTH / 2;
 
 	vector<Sphere> spheres;
 	spheres.push_back({ vec3(0, 0, 7), 1.0f });
 	spheres.push_back({ vec3(0, 0, 2), 0.5f });
+	spheres.push_back({ vec3(4, 0, 2), 0.5f });
+	spheres.push_back({ vec3(-4, 0, 2), 0.5f });
 
 	float stepX = 2 / (float)TEXTURE_WIDHT;
 	float stepY = 2 / (float)TEXTURE_HEIGHT;
@@ -78,9 +73,9 @@ void UpdateTextureCpu(Texture& texture)
 		vec4(-translationX, -translationY, translationZ, 1)
 	);
 
-	for (int i = 0; i < TEXTURE_WIDHT; i++)
+	for (int i = 0; i < TEXTURE_WIDHT; i+=2)
 	{
-		for (int j = 0; j < TEXTURE_HEIGHT; j++)
+		for (int j = 0; j < TEXTURE_HEIGHT; j+=2)
 		{
 			vec3 color = vec3(0, 0, 0);
 			float closest = 1000000;
@@ -89,7 +84,7 @@ void UpdateTextureCpu(Texture& texture)
 				vec3 ray = vec3(i - TEXTURE_WIDHT / 2, j - TEXTURE_HEIGHT / 2, distance);
 				ray = normalize(ray);
 
-				vec4 spherePos = viewMatrix * vec4(spheres[k].position, 1);
+				vec4 spherePos = viewMatrix * vec4(spheres[k].position, 0);
 				vec3 spherePos3 = vec3(spherePos.x, spherePos.y, spherePos.z);
 
 
@@ -108,8 +103,12 @@ void UpdateTextureCpu(Texture& texture)
 						float c = remap(distanceToSphere + spheres[k].radius, distanceToSphere - spheres[k].radius, t1);
 						if (k == 0)
 							color = vec3(255 * c, 255 * c, 255 * c);
-						else
+						else if (k == 1)
 							color = vec3(c * 100, c * 100, 255 * c);
+						else if (k == 2)
+							color = vec3(255 * c, 200 * c, 200 * c);
+						else if (k == 3)
+							color = vec3(100 * c, 255 * c, 100 * c);
 					}
 				}
 			}

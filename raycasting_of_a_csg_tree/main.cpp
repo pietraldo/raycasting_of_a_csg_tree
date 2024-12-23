@@ -33,7 +33,7 @@ Texture CreateTexture() {
 	texture.channels = 3;
 	texture.width = TEXTURE_WIDHT;
 	texture.height = TEXTURE_HEIGHT;
-	texture.data = std::vector<unsigned char>(TEXTURE_WIDHT * TEXTURE_HEIGHT * texture.channels, 200);
+	texture.data = std::vector<unsigned char>(TEXTURE_WIDHT * TEXTURE_HEIGHT * texture.channels, 0);
 
 	return texture;
 }
@@ -188,6 +188,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	camera.yaw += xoffset;
 	camera.pitch += yoffset;
 
+
+	if (camera.pitch > 89.0f)
+		camera.pitch = 89.0f;
+	if (camera.pitch < -89.0f)
+		camera.pitch = -89.0f;
 
 	glm::vec3 direction;
 	direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
