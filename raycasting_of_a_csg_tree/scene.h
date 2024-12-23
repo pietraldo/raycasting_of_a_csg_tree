@@ -54,8 +54,7 @@ void UpdateTextureCpu(Texture& texture)
 	spheres.push_back({ vec3(4, 0, 2), 0.5f });
 	spheres.push_back({ vec3(-4, 0, 2), 0.5f });
 
-	float stepX = 2 / (float)TEXTURE_WIDHT;
-	float stepY = 2 / (float)TEXTURE_HEIGHT;
+
 	float aspectRatio = (float)TEXTURE_WIDHT / (float)TEXTURE_HEIGHT;
 
 	vec3 forward = normalize(camera.direction);
@@ -73,6 +72,11 @@ void UpdateTextureCpu(Texture& texture)
 		vec4(-translationX, -translationY, translationZ, 1)
 	);
 
+	mat4 view = glm::inverse(glm::lookAt(camera.position, camera.position + camera.direction, camera.up));
+	mat4 projection = glm::inverse(glm::perspectiveFov(glm::radians(45.0f), (float)TEXTURE_WIDHT, (float)TEXTURE_HEIGHT, 0.5f, 10.0f));
+
+	float stepX = 2 / (float)TEXTURE_WIDHT;
+	float stepY = 2 / (float)TEXTURE_HEIGHT;
 	for (int i = 0; i < TEXTURE_WIDHT; i+=2)
 	{
 		for (int j = 0; j < TEXTURE_HEIGHT; j+=2)
@@ -81,16 +85,16 @@ void UpdateTextureCpu(Texture& texture)
 			float closest = 1000000;
 			for (int k = 0; k < spheres.size(); k++)
 			{
-				vec3 ray = vec3(i - TEXTURE_WIDHT / 2, j - TEXTURE_HEIGHT / 2, distance);
-				ray = normalize(ray);
+				vec3 ray = vec3(-1 + i * stepX, -1+ j * stepY, 1.0f);
+				vec4 target = projection * vec4(ray, 1.0f);
+				target = normalize(target / target.w);
+				target.w = 0.0f;
 
-				vec4 spherePos = viewMatrix * vec4(spheres[k].position, 0);
-				vec3 spherePos3 = vec3(spherePos.x, spherePos.y, spherePos.z);
+				ray = view * target;
 
-
-				float t = dot(spherePos3 - camera.position, ray);
+				float t = dot(spheres[k].position - camera.position, ray);
 				vec3 p = camera.position + t * ray;
-				float y = length(spherePos3 - p);
+				float y = length(spheres[k].position - p);
 				if (y < spheres[k].radius)
 				{
 					float x = sqrt(spheres[k].radius * spheres[k].radius - y * y);
@@ -99,7 +103,7 @@ void UpdateTextureCpu(Texture& texture)
 					if (t1 < closest && t1>0)
 					{
 						closest = t1;
-						float distanceToSphere = length(spherePos3 - camera.position);
+						float distanceToSphere = length(spheres[k].position - camera.position);
 						float c = remap(distanceToSphere + spheres[k].radius, distanceToSphere - spheres[k].radius, t1);
 						if (k == 0)
 							color = vec3(255 * c, 255 * c, 255 * c);
