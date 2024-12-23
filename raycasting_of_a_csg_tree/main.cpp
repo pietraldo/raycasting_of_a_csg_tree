@@ -69,7 +69,7 @@ int main() {
 	scene.SetCamera(Camera(vec3(0, 0, 0)));
 	scene.AddSphere(Sphere(vec3(0, 0, 7), 1.0f));
 	scene.AddSphere(Sphere(vec3(0, 0, 2), 0.5f));
-	scene.AddLight(Light(vec3(0, 0, 0), vec3(1, 1, 1)));
+	scene.SetLight(Light(vec3(0, 20, 0), vec3(1, 1, 1)));
 
 	RegisterTexture(scene.GetTexture());
 

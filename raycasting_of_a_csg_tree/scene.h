@@ -15,6 +15,7 @@ using namespace std;
 class Light
 {
 public:
+	Light() : position(vec3(0, 0, 0)), color(vec3(1, 1, 1)) {}
 	Light(vec3 position, vec3 color) : position(position), color(color) {}
 	vec3 position;
 	vec3 color;
@@ -55,7 +56,7 @@ public:
 class Scene
 {
 	vector<Sphere> spheres;
-	vector<Light> lights;
+	Light light;
 	Camera camera;
 	Texture texture;
 
@@ -63,16 +64,11 @@ public:
 	Scene();
 	void SetCamera(Camera camera);
 	void AddSphere(Sphere sphere);
-	void AddLight(Light light);
+	void SetLight(Light light);
 
 	Camera& GetCamera() { return camera; }
 	Texture& GetTexture() { return texture; }
 	void UpdateTextureCpu();
-
-	float remap(float a, float b, float t)
-	{
-		return (t - a) / (b - a);
-	}
 };
 
 

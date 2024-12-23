@@ -10,14 +10,15 @@ void Scene::AddSphere(Sphere sphere)
 	spheres.push_back(sphere);
 }
 
-void Scene::AddLight(Light light)
+void Scene::SetLight(Light light)
 {
-	lights.push_back(light);
+	this->light = light;
 }
 
 Scene::Scene()
 {
-	camera = Camera(vec3(0, 0, 0));
+	light = Light();
+	camera = Camera();
 	texture = Texture(3, TEXTURE_WIDHT, TEXTURE_HEIGHT, 0);
 }
 
@@ -80,17 +81,30 @@ void Scene::UpdateTextureCpu()
 					{
 						closest = t1;
 						float distanceToSphere = length(spheres[k].position - camera.position);
-						float c = remap(distanceToSphere + spheres[k].radius, distanceToSphere - spheres[k].radius, t1);
-						if (c > 1)
-							c = 1;
-						if (k == 0)
-							color = vec3(255 * c, 255 * c, 255 * c);
-						else if (k == 1)
-							color = vec3(c * 100, c * 100, 255 * c);
-						else if (k == 2)
-							color = vec3(255 * c, 200 * c, 200 * c);
-						else if (k == 3)
-							color = vec3(100 * c, 255 * c, 100 * c);
+
+						vec3 pixelPosition = camera.position + t1 * ray;
+
+						float ka = 0.1;
+						float kd = 0.5;
+						float ks = 0.4;
+						float shininess = 10;
+						float ia = 0.5;
+						float id = 0.5;
+						float is = 0.5;
+						vec3 L = normalize(light.position - pixelPosition);
+						vec3 N = normalize(pixelPosition - spheres[k].position);
+						vec3 V = normalize(-ray);
+						vec3 R = normalize(2 * dot(L, N) * N - L);
+
+						float col = ka * ia + kd * id * dot(N, L) + ks * is * pow(dot(R, V), shininess);
+						
+						col *= 255;
+						if (col > 255)
+							col = 255;
+						color = vec3(col,col,col);
+
+						//color = vec3(255, 255, 255);
+						
 					}
 				}
 			}
