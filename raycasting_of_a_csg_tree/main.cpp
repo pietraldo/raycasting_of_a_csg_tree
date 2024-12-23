@@ -20,7 +20,7 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 int createWindow(GLFWwindow*& window);
 void InitImGui(GLFWwindow* window);
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow* window, float dt);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 
@@ -83,8 +83,13 @@ int main() {
 
 	auto last = glfwGetTime();
 	while (!glfwWindowShouldClose(window)) {
+		
+		auto time = glfwGetTime();
+		float dt = time - last;
+		std::cout << 1 / dt << std::endl;
 
-		processInput(window);
+		last = time;
+		processInput(window,dt);
 
 		UpdateTextureCpu(texture);
 
@@ -124,7 +129,15 @@ int main() {
 		ImGui::Text("Camera Direction: %f %f %f", camera.direction.x, camera.direction.y, camera.direction.z);
 		ImGui::Text("Camera Yaw: %f", camera.yaw);
 		ImGui::Text("Camera Pitch: %f", camera.pitch);
+		ImGui::SliderFloat("Camera Yaw", &camera.yaw, -180, 180);
+		ImGui::SliderFloat("Camera Pitch", &camera.pitch, -89, 89);
 		ImGui::End();
+
+		glm::vec3 direction;
+		direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+		direction.y = sin(glm::radians(camera.pitch));
+		direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
+		camera.direction = glm::normalize(direction);
 
 		// Render ImGui data
 		ImGui::Render();
@@ -134,9 +147,7 @@ int main() {
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
-		auto time = glfwGetTime();
-		//std::cout << 1 / (time - last) << std::endl;
-		last = time;
+		
 	}
 
 
@@ -151,8 +162,13 @@ int main() {
 bool firstMouse = true;
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	/*if (GLFW_PRESS != glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
+	if (GLFW_PRESS != glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
+	{
+		lastX = xpos;
+		lastY = ypos;
 		return;
+	}
+		
 	if (firstMouse)
 	{
 		lastX = xpos;
@@ -172,10 +188,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	camera.yaw += xoffset;
 	camera.pitch += yoffset;
 
-	if (camera.pitch > 89.0f)
-		camera.pitch = 89.0f;
-	if (camera.pitch < -89.0f)
-		camera.pitch = -89.0f;
 
 	glm::vec3 direction;
 	direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
@@ -183,27 +195,21 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
 	camera.direction = glm::normalize(direction);
 
-	cout << xpos << " " << ypos << endl;*/
-	float dx = xpos - lastX;
-	float dy = ypos - lastY;
-	lastY = ypos;
-	lastX = xpos;
-	angleX -= dy * 0.1f;
-	angleY -= dx * 0.1f;
+	
 }
-
-void processInput(GLFWwindow* window)
+float speed = 2.0f;
+void processInput(GLFWwindow* window, float timePassed)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.position += camera.direction*0.1f;
+		camera.position -= camera.direction*speed* timePassed;
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.position -= camera.direction*0.1f;
+		camera.position += camera.direction * speed * timePassed;
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.position -= glm::normalize(glm::cross(camera.direction, camera.up))*0.1f;
+		camera.position -= glm::normalize(glm::cross(camera.direction, camera.up)) * speed * timePassed;
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.position += glm::normalize(glm::cross(camera.direction, camera.up))*0.1f;
+		camera.position += glm::normalize(glm::cross(camera.direction, camera.up)) * speed * timePassed;
 	
 }
 
