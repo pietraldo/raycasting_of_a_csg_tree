@@ -97,7 +97,7 @@ void Scene::UpdateTextureCpu()
 							}
 							
 						}
-					}
+					} 
 
 					float ka = 0.1; // Ambient reflection coefficient
 					float kd = 0.5; // Diffuse reflection coefficient
