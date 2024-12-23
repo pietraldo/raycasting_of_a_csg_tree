@@ -22,6 +22,7 @@ int createWindow(GLFWwindow*& window);
 void InitImGui(GLFWwindow* window);
 void processInput(GLFWwindow* window, float dt);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 
 
@@ -70,8 +71,10 @@ int main() {
 		return -1;
 	}
 	InitImGui(window);
+	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 
 	Texture texture = CreateTexture();
 	RegisterTexture(texture);
@@ -208,9 +211,9 @@ void processInput(GLFWwindow* window, float timePassed)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.position -= camera.direction*speed* timePassed;
+		camera.position += camera.direction*speed* timePassed;
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.position += camera.direction * speed * timePassed;
+		camera.position -= camera.direction * speed * timePassed;
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 		camera.position -= glm::normalize(glm::cross(camera.direction, camera.up)) * speed * timePassed;
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
@@ -269,3 +272,11 @@ void InitImGui(GLFWwindow* window) {
 	ImGui_ImplOpenGL3_Init("#version 330");
 }
 
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	camera.fov -= (float)yoffset;
+	if(camera.fov>90)
+		camera.fov = 90;
+	if (camera.fov < 1)
+		camera.fov = 1;
+}

@@ -41,6 +41,7 @@ struct Camera
 	vec3 up = vec3(0, 1, 0);
 	float yaw = 90;
 	float pitch = 0;
+	float fov = 45;
 };
 
 Camera camera = { vec3(0, 0, 0), vec3(0, 0, 1) };
@@ -72,8 +73,9 @@ void UpdateTextureCpu(Texture& texture)
 		vec4(-translationX, -translationY, translationZ, 1)
 	);
 
+	// Matrix that transforms from camera space to screen space
 	mat4 view = glm::inverse(glm::lookAt(camera.position, camera.position + camera.direction, camera.up));
-	mat4 projection = glm::inverse(glm::perspectiveFov(glm::radians(45.0f), (float)TEXTURE_WIDHT, (float)TEXTURE_HEIGHT, 0.5f, 10.0f));
+	mat4 projection = glm::inverse(glm::perspectiveFov(glm::radians(camera.fov), (float)TEXTURE_WIDHT, (float)TEXTURE_HEIGHT, 0.1f, 10.0f));
 
 	float stepX = 2 / (float)TEXTURE_WIDHT;
 	float stepY = 2 / (float)TEXTURE_HEIGHT;
@@ -81,16 +83,18 @@ void UpdateTextureCpu(Texture& texture)
 	{
 		for (int j = 0; j < TEXTURE_HEIGHT; j+=2)
 		{
+			vec3 ray = vec3(-1 + i * stepX, -1 + j * stepY, 1.0f);
+			vec4 target = projection * vec4(ray, 1.0f);
+			target = normalize(target / target.w);
+			target.w = 0.0f;
+
+			ray = view * target;
+
 			vec3 color = vec3(0, 0, 0);
 			float closest = 1000000;
 			for (int k = 0; k < spheres.size(); k++)
 			{
-				vec3 ray = vec3(-1 + i * stepX, -1+ j * stepY, 1.0f);
-				vec4 target = projection * vec4(ray, 1.0f);
-				target = normalize(target / target.w);
-				target.w = 0.0f;
-
-				ray = view * target;
+				
 
 				float t = dot(spheres[k].position - camera.position, ray);
 				vec3 p = camera.position + t * ray;
