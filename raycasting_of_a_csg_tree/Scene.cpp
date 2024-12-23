@@ -80,31 +80,47 @@ void Scene::UpdateTextureCpu()
 					if (t1 < closest && t1>0)
 					{
 						closest = t1;
-						float distanceToSphere = length(spheres[k].position - camera.position);
 
 						vec3 pixelPosition = camera.position + t1 * ray;
 
-						float ka = 0.1;
-						float kd = 0.5;
-						float ks = 0.4;
-						float shininess = 10;
-						float ia = 0.5;
-						float id = 0.5;
-						float is = 0.5;
-						vec3 L = normalize(light.position - pixelPosition);
-						vec3 N = normalize(pixelPosition - spheres[k].position);
-						vec3 V = normalize(-ray);
-						vec3 R = normalize(2 * dot(L, N) * N - L);
 
-						float col = ka * ia + kd * id * dot(N, L) + ks * is * pow(dot(R, V), shininess);
-						
+						float ka = 0.1; // Ambient reflection coefficient
+						float kd = 0.5; // Diffuse reflection coefficient
+						float ks = 0.4; // Specular reflection coefficient
+						float shininess = 10; // Shininess factor
+						float ia = 0.5; // Ambient light intensity
+						float id = 0.5; // Diffuse light intensity
+						float is = 0.5; // Specular light intensity
+
+						vec3 L = normalize(light.position - pixelPosition); // Light direction
+						vec3 N = normalize(pixelPosition - spheres[k].position); // Normal at the point
+						vec3 V = normalize(-ray); // View direction
+						vec3 R = normalize(2.0f * dot(L, N) * N - L); // Reflection vector
+
+						// Ambient contribution
+						float ambient = ka * ia;
+
+						// Diffuse contribution (only if dot(N, L) > 0)
+						float diffuse = kd * id * dot(N, L);
+						if (diffuse < 0.0f) {
+							diffuse = 0.0f;
+						}
+
+						// Specular contribution (only if dot(R, V) > 0)
+						float specular = 0.0f;
+						float dotRV = dot(R, V);
+						if (dotRV > 0.0f) {
+							specular = ks * is * pow(dotRV, shininess);
+						}
+
+						float col = ambient + diffuse + specular;
 						col *= 255;
-						if (col > 255)
-							col = 255;
-						color = vec3(col,col,col);
+						col = clamp(col, 0.0f, 255.0f);
 
-						//color = vec3(255, 255, 255);
-						
+						color = vec3(col, col, col);
+
+
+
 					}
 				}
 			}

@@ -5,9 +5,12 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
 #include <vector>
+
 #include "Constants.h"
 #include "Camera.h"
+
 
 using namespace glm;
 using namespace std;
