@@ -39,11 +39,11 @@ struct Camera
 	vec3 position;
 	vec3 direction;
 	vec3 up = vec3(0, 1, 0);
-	float yaw = -90;
+	float yaw = 90;
 	float pitch = 0;
 };
 
-Camera camera = { vec3(0, 0, 2), vec3(0, 0, 1) };
+Camera camera = { vec3(0, 0, 0), vec3(0, 0, 1) };
 void UpdateTextureCpu(Texture& texture)
 {
 	float distance = SCR_WIDTH / 2;
@@ -105,6 +105,8 @@ void UpdateTextureCpu(Texture& texture)
 						closest = t1;
 						float distanceToSphere = length(spheres[k].position - camera.position);
 						float c = remap(distanceToSphere + spheres[k].radius, distanceToSphere - spheres[k].radius, t1);
+						if(c>1)
+							c = 1;
 						if (k == 0)
 							color = vec3(255 * c, 255 * c, 255 * c);
 						else if (k == 1)
