@@ -14,6 +14,7 @@
 
 #include "kernels.cuh"
 #include "scene.h"
+#include "Camera.h"
 #include "Constants.h"
 
 // Function declarations
@@ -23,21 +24,11 @@ void InitImGui(GLFWwindow* window);
 void processInput(GLFWwindow* window, float dt);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-
+void renderWindow(GLFWwindow* window, Scene& scene);
 
 
 float lastX = TEXTURE_WIDHT / 2, lastY = TEXTURE_HEIGHT / 2;
 
-Texture CreateTexture() {
-
-	Texture texture;
-	texture.channels = 3;
-	texture.width = TEXTURE_WIDHT;
-	texture.height = TEXTURE_HEIGHT;
-	texture.data = std::vector<unsigned char>(TEXTURE_WIDHT * TEXTURE_HEIGHT * texture.channels, 0);
-
-	return texture;
-}
 
 void RegisterTexture(Texture& texture) {
 	// Generate and bind the texture
@@ -60,9 +51,7 @@ void RegisterTexture(Texture& texture) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-
-
-
+Scene scene;
 // Main function
 int main() {
 
@@ -76,13 +65,15 @@ int main() {
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
-	Texture texture = CreateTexture();
-	RegisterTexture(texture);
+	scene = Scene();
+	scene.SetCamera(Camera(vec3(0, 0, 0)));
+	scene.AddSphere(Sphere(vec3(0, 0, 7), 1.0f));
+	scene.AddSphere(Sphere(vec3(0, 0, 2), 0.5f));
+	scene.AddLight(Light(vec3(0, 0, 0), vec3(1, 1, 1)));
 
-	unsigned char* dev_texture_data;
-	cudaMalloc(&dev_texture_data, sizeof(unsigned char) * texture.data.size());
-	cudaMemcpy(dev_texture_data, texture.data.data(), sizeof(unsigned char) * texture.data.size(), cudaMemcpyHostToDevice);
+	RegisterTexture(scene.GetTexture());
 
+	
 
 	auto last = glfwGetTime();
 	while (!glfwWindowShouldClose(window)) {
@@ -94,70 +85,58 @@ int main() {
 		last = time;
 		processInput(window,dt);
 
-		UpdateTextureCpu(texture);
+		scene.UpdateTextureCpu();
 
 		//clear the screen
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// generate texture in cuda
-		//UpdateTextureOnGPU(dev_texture_data);
-		//cudaMemcpy(texture.data.data(), dev_texture_data, sizeof(unsigned char) * texture.data.size(), cudaMemcpyDeviceToHost);
-
 		// copy to opengl
-		glBindTexture(GL_TEXTURE_2D, texture.id);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXTURE_WIDHT, TEXTURE_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, texture.data.data());
+		glBindTexture(GL_TEXTURE_2D, scene.GetTexture().id);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXTURE_WIDHT, TEXTURE_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, scene.GetTexture().data.data());
 
-
-		// Start ImGui frame
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		// Render ImGui window
-		ImGui::SetNextWindowPos(ImVec2(0, 0));
-		ImVec2 m_WindowSize = ImVec2(TEXTURE_WIDHT, TEXTURE_HEIGHT);
-		ImGui::SetNextWindowSize(m_WindowSize);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
-		ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-		ImVec2 m_ViewportSize = ImGui::GetContentRegionAvail();
-		ImGui::Image((ImTextureID)(uintptr_t)texture.id, m_ViewportSize, { 0, 1 }, { 1, 0 });
-		ImGui::End();
-		ImGui::PopStyleVar();
-
-		ImGui::Begin("Debug Info");
-		ImGui::Text("Camera Position: %f %f %f", camera.position.x, camera.position.y, camera.position.z);
-		ImGui::Text("Camera Direction: %f %f %f", camera.direction.x, camera.direction.y, camera.direction.z);
-		ImGui::Text("Camera Yaw: %f", camera.yaw);
-		ImGui::Text("Camera Pitch: %f", camera.pitch);
-		ImGui::SliderFloat("Camera Yaw", &camera.yaw, -180, 180);
-		ImGui::SliderFloat("Camera Pitch", &camera.pitch, -89, 89);
-		ImGui::End();
-
-		glm::vec3 direction;
-		direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-		direction.y = sin(glm::radians(camera.pitch));
-		direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-		camera.direction = glm::normalize(direction);
-
-		// Render ImGui data
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		renderWindow(window, scene);
+		
 
 		// Swap buffers and poll event
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-
-		
 	}
 
-
-
-
-
 	return 0;
+}
+
+void renderWindow(GLFWwindow* window, Scene& scene)
+{
+	// Start ImGui frame
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	// Render ImGui window
+	ImGui::SetNextWindowPos(ImVec2(0, 0));
+	ImVec2 m_WindowSize = ImVec2(TEXTURE_WIDHT, TEXTURE_HEIGHT);
+	ImGui::SetNextWindowSize(m_WindowSize);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
+	ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	ImVec2 m_ViewportSize = ImGui::GetContentRegionAvail();
+	ImGui::Image((ImTextureID)(uintptr_t)scene.GetTexture().id, m_ViewportSize, {0, 1}, {1, 0});
+	ImGui::End();
+	ImGui::PopStyleVar();
+
+	ImGui::Begin("Debug Info");
+	ImGui::Text("Camera Position: %f %f %f", scene.GetCamera().position.x, scene.GetCamera().position.y, scene.GetCamera().position.z);
+	ImGui::Text("Camera Direction: %f %f %f", scene.GetCamera().direction.x, scene.GetCamera().direction.y, scene.GetCamera().direction.z);
+	ImGui::Text("Camera Yaw: %f", scene.GetCamera().yaw);
+	ImGui::Text("Camera Pitch: %f", scene.GetCamera().pitch);
+	ImGui::End();
+
+
+	// Render ImGui data
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 
@@ -188,6 +167,8 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	xoffset *= sensitivity;
 	yoffset *= sensitivity;
 
+	Camera& camera = scene.GetCamera();
+
 	camera.yaw += xoffset;
 	camera.pitch += yoffset;
 
@@ -202,12 +183,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	direction.y = sin(glm::radians(camera.pitch));
 	direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
 	camera.direction = glm::normalize(direction);
-
-	
 }
 float speed = 2.0f;
 void processInput(GLFWwindow* window, float timePassed)
 {
+	Camera& camera = scene.GetCamera();
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -274,6 +254,7 @@ void InitImGui(GLFWwindow* window) {
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
+	Camera& camera = scene.GetCamera();
 	camera.fov -= (float)yoffset;
 	if(camera.fov>90)
 		camera.fov = 90;
