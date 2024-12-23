@@ -72,6 +72,8 @@ public:
 	Camera& GetCamera() { return camera; }
 	Texture& GetTexture() { return texture; }
 	void UpdateTextureCpu();
+
+	bool RaySphereIntersection(vec3 rayOrigin, vec3 rayDirection, Sphere sphere, float& t1, float& t2);
 };
 
 
