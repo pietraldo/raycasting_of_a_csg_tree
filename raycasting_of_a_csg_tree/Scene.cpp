@@ -78,6 +78,26 @@ void Scene::UpdateTextureCpu()
 
 					vec3 pixelPosition = camera.position + t1 * ray;
 
+					bool block = false;
+					
+					vec3 lightRay = pixelPosition - light.position;
+					float lightDistance = length(lightRay);
+					lightRay = normalize(lightRay);
+					
+					for (int l = 0; l < spheres.size(); l++)
+					{
+						if (l == k) continue;
+						float t5, t6;
+						if (RaySphereIntersection(light.position, lightRay, spheres[l], t5, t6))
+						{
+							if (t5 >0 && t5<lightDistance)
+							{
+								block = true;
+								break;
+							}
+							
+						}
+					}
 
 					float ka = 0.1; // Ambient reflection coefficient
 					float kd = 0.5; // Diffuse reflection coefficient
@@ -95,7 +115,6 @@ void Scene::UpdateTextureCpu()
 					// Ambient contribution
 					float ambient = ka * ia;
 
-
 					// Diffuse contribution (only if dot(N, L) > 0)
 					float diffuse = kd * id * dot(N, L);
 					if (diffuse < 0.0f) {
@@ -110,8 +129,10 @@ void Scene::UpdateTextureCpu()
 						specular = ks * is * pow(dotRV, shininess);
 					}
 
-
+					
 					float col = ambient + diffuse + specular;
+					if (block)
+						col = ambient;
 					col *= 255;
 					col = clamp(col, 0.0f, 255.0f);
 
