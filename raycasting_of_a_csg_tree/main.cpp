@@ -69,7 +69,7 @@ int main() {
 	scene.SetCamera(Camera(vec3(0, 0, 0)));
 	scene.AddSphere(Sphere(vec3(0, 0, 7), 1.0f));
 	scene.AddSphere(Sphere(vec3(0, 0, 2), 0.5f));
-	scene.SetLight(Light(vec3(0, 20, 0), vec3(1, 1, 1)));
+	scene.SetLight(Light(vec3(0, 0, 0), vec3(1, 1, 1)));
 
 	RegisterTexture(scene.GetTexture());
 
@@ -84,6 +84,9 @@ int main() {
 
 		last = time;
 		processInput(window,dt);
+		
+		float r = 10.0f;
+		scene.SetLight(Light(vec3(r * cos(time), 0, r * sin(time)), vec3(1,1,1)));
 
 		scene.UpdateTextureCpu();
 
