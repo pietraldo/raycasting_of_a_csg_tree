@@ -132,9 +132,40 @@ void Window::Render(Scene& scene)
 	// Render ImGui data
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	// Swap buffers and poll event
+	glfwSwapBuffers(window);
+	glfwPollEvents();
 }
 
 bool Window::ShouldCloseWindow()
 {
 	return glfwWindowShouldClose(window);
+}
+
+void Window::ClearScreen()
+{
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void Window::RegisterTexture(Texture& texture)
+{
+	glGenTextures(1, &texture.id);
+	glBindTexture(GL_TEXTURE_2D, texture.id);
+
+	// Set texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// Determine the appropriate OpenGL format
+	GLenum format = (texture.channels == 3) ? GL_RGB : GL_RGBA;
+
+	// Upload texture data to the GPU
+	glTexImage2D(GL_TEXTURE_2D, 0, format, texture.width, texture.height, 0, format, GL_UNSIGNED_BYTE, texture.data.data());
+
+	// Unbind texture
+	glBindTexture(GL_TEXTURE_2D, 0);
 }

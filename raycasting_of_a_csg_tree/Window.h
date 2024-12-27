@@ -19,6 +19,8 @@ public:
 	void ProccessInput(Scene& scene, float dt);
 	bool ShouldCloseWindow();
 	GLFWwindow* GetWindow() { return window; }
+	void ClearScreen();
+	void RegisterTexture(Texture& texture);
 
 private:
 	GLFWwindow* window;
