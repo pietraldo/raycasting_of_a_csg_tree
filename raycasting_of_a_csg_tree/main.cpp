@@ -37,13 +37,13 @@ int main() {
 	scene = Scene();
 	scene.SetCamera(Camera(vec3(0, 0, 0)));
 	scene.AddSphere(Sphere(vec3(0, 0, 7), 1.0f));
-	scene.AddSphere(Sphere(vec3(0, 0, 2), 0.5f));
+	scene.AddSphere(Sphere(vec3(0, 0, 2), 0.5f, vec3(255, 0, 0)));
 	scene.AddSphere(Sphere(vec3(0, 0, 4), 0.5f));
 	scene.AddSphere(Sphere(vec3(0, 0, 6), 0.5f));
-	scene.AddSphere(Sphere(vec3(0, 0, 8), 0.5f));
+	scene.AddSphere(Sphere(vec3(0, 0, 8), 0.5f, vec3(0, 255, 0)));
 	scene.AddSphere(Sphere(vec3(4, 3, -4), 0.5f));
-	scene.AddSphere(Sphere(vec3(-4, 3, -4), 0.5f));
-	scene.AddSphere(Sphere(vec3(4, 3, 4), 0.5f));
+	scene.AddSphere(Sphere(vec3(-4, 3, -4), 0.5f, vec3(255, 0, 255)));
+	scene.AddSphere(Sphere(vec3(4, 3, 4), 0.5f, vec3(0, 0, 255)));
 	scene.SetLight(Light(vec3(0, 0, -4), vec3(1, 1, 1)));
 
 	window.RegisterTexture(scene.GetTexture());

@@ -133,10 +133,11 @@ void Scene::UpdateTextureCpu()
 					float col = ambient + diffuse + specular;
 					if (block)
 						col = ambient;
-					col *= 255;
-					col = clamp(col, 0.0f, 255.0f);
 
-					color = vec3(col, col, col);
+					col = clamp(col, 0.0f, 1.0f);
+
+					
+					color = spheres[k].color*col;
 				}
 
 			}
