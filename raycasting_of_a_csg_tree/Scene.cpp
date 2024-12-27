@@ -31,6 +31,53 @@ void Texture::SetPixel(int x, int y, glm::vec3 color)
 	data[index + 2] = color.b;
 }
 
+void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count)
+{
+
+	vec3 forward = normalize(camera.direction);
+	vec3 right = normalize(cross(forward, camera.up));
+	vec3 up = normalize(cross(right, forward));
+
+	float translationX = dot(camera.position, right);
+	float translationY = dot(camera.position, up);
+	float translationZ = dot(camera.position, forward);
+
+	mat4 viewMatrix = mat4(
+		vec4(right.x, up.x, -forward.x, 0),
+		vec4(right.y, up.y, -forward.y, 0),
+		vec4(right.z, up.z, -forward.z, 0),
+		vec4(-translationX, -translationY, translationZ, 1)
+	);
+
+	// Matrix that transforms from camera space to screen space
+	mat4 view = glm::inverse(glm::lookAt(camera.position, camera.position + camera.direction, camera.up));
+	mat4 projection = glm::inverse(glm::perspectiveFov(glm::radians(camera.fov), (float)texture.width, (float)texture.height, 0.1f, 10.0f));
+
+
+
+	float projection2[16];
+	float view2[16];
+
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			projection2[i * 4 + j] = projection[j][i];
+			view2[i * 4 + j] = view[j][i];
+		}
+	}
+
+	float camera_position[3] = {camera.position.x, camera.position.y, camera.position.z};
+	float light_position[3] = { light.position.x, light.position.y, light.position.z };
+
+	cudaMemcpy(dev_projection, projection2, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_view, view2, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_camera_position, camera_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_light_position, light_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
+
+	UpdateOnGPU(dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, dev_spheres, sphere_count, dev_projection, dev_view, dev_camera_position, dev_light_position);
+}
+
 void Scene::UpdateTextureCpu()
 {
 	vec3 forward = normalize(camera.direction);
@@ -79,25 +126,25 @@ void Scene::UpdateTextureCpu()
 					vec3 pixelPosition = camera.position + t1 * ray;
 
 					bool block = false;
-					
+
 					vec3 lightRay = pixelPosition - light.position;
 					float lightDistance = length(lightRay);
 					lightRay = normalize(lightRay);
-					
+
 					for (int l = 0; l < spheres.size(); l++)
 					{
 						if (l == k) continue;
 						float t5, t6;
 						if (spheres[l].IntersectionPoint(light.position, lightRay, t5, t6))
 						{
-							if (t5 >0 && t5<lightDistance)
+							if (t5 > 0 && t5 < lightDistance)
 							{
 								block = true;
 								break;
 							}
-							
+
 						}
-					} 
+					}
 
 					float ka = 0.1; // Ambient reflection coefficient
 					float kd = 0.5; // Diffuse reflection coefficient
@@ -129,15 +176,15 @@ void Scene::UpdateTextureCpu()
 						specular = ks * is * pow(dotRV, shininess);
 					}
 
-					
+
 					float col = ambient + diffuse + specular;
 					if (block)
 						col = ambient;
 
 					col = clamp(col, 0.0f, 1.0f);
 
-					
-					color = spheres[k].color*col;
+
+					color = spheres[k].color * col;
 				}
 
 			}

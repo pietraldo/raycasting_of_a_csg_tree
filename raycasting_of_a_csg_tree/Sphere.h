@@ -14,3 +14,4 @@ public:
 
 	bool IntersectionPoint(glm::vec3 rayOrigin, glm::vec3 rayDirection, float& t1, float& t2);
 };
+

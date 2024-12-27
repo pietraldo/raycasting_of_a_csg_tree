@@ -17,6 +17,7 @@
 #include "Camera.h"
 #include "Constants.h"
 #include "Window.h"
+#include "DevStruct.h"
 
 
 
@@ -24,6 +25,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 float GetTimePassed(float& last);
 
 
+#include "kernels.cuh"
 
 Scene scene;
 // Main function
@@ -48,7 +50,40 @@ int main() {
 
 	window.RegisterTexture(scene.GetTexture());
 
-	
+
+	DevSphere spheres[8];
+	for (int i = 0; i < 8; i++) {
+		
+		spheres[i].position[0] = scene.spheres[i].position.x;
+		spheres[i].position[1] = scene.spheres[i].position.y;
+		spheres[i].position[2] = scene.spheres[i].position.z;
+
+		spheres[i].radius = scene.spheres[i].radius;
+		
+		spheres[i].color[0] = scene.spheres[i].color.r;
+		spheres[i].color[1] = scene.spheres[i].color.g;
+		spheres[i].color[2] = scene.spheres[i].color.b;
+	}
+
+	//copy sphere and texture to gpu
+	DevSphere* dev_spheres;
+	unsigned char* dev_texture_data;
+	float* dev_projection;
+	float* dev_view;
+	float* dev_camera_position;
+	float* dev_light_postion;
+
+
+	cudaMalloc(&dev_projection, 16 * sizeof(float));
+	cudaMalloc(&dev_view, 16 * sizeof(float));
+	cudaMalloc(&dev_camera_position, 3 * sizeof(float));
+	cudaMalloc(&dev_light_postion, 3 * sizeof(float));
+	cudaMalloc(&dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char));
+	cudaMalloc(&dev_spheres, 8 * sizeof(DevSphere));
+
+
+	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_spheres, spheres, 8 * sizeof(DevSphere), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
@@ -60,14 +95,16 @@ int main() {
 		float r = 10.0f;
 		scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1,1,1)));
 
-		scene.UpdateTextureCpu();
+		scene.UpdateTextureGpu(dev_texture_data, dev_spheres, dev_projection, dev_view, dev_camera_position, dev_light_postion,8);
 
-		window.ClearScreen();
+		// copy texture to cpu
+		cudaMemcpy(scene.GetTexture().data.data(), dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
 		// copy to opengl
 		glBindTexture(GL_TEXTURE_2D, scene.GetTexture().id);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXTURE_WIDHT, TEXTURE_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, scene.GetTexture().data.data());
 
+		window.ClearScreen();
 		window.Render(scene);
 	}
 
