@@ -101,9 +101,9 @@ void Scene::UpdateTextureCpu(Tree& tree)
 
 	float stepX = 2 / (float)texture.width;
 	float stepY = 2 / (float)texture.height;
-	for (int i = 0; i < texture.width; i++)
+	for (int i = 0; i < texture.width; i+=2)
 	{
-		for (int j = 0; j < texture.height; j++)
+		for (int j = 0; j < texture.height; j+=2)
 		{
 			vec3 ray = vec3(-1 + i * stepX, -1 + j * stepY, 1.0f);
 			vec4 target = projection * vec4(ray, 1.0f);
