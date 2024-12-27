@@ -31,7 +31,7 @@ __host__ __device__ void NormalizeVector3(float* vector)
 	vector[2] /= length;
 }
 
-// potrzebuje: texture data,width, height, projection matrix, view matrix
+
 __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
 	float* projection, float* view, float* camera_pos, float* light_pos)
 {
@@ -95,11 +95,11 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 				}
 			}
 
-			float ka = 0.1; // Ambient reflection coefficient
+			float ka = 0.2; // Ambient reflection coefficient
 			float kd = 0.5; // Diffuse reflection coefficient
 			float ks = 0.4; // Specular reflection coefficient
 			float shininess = 10; // Shininess factor
-			float ia = 0.5; // Ambient light intensity
+			float ia = 0.6; // Ambient light intensity
 			float id = 0.5; // Diffuse light intensity
 			float is = 0.5; // Specular light intensity
 
