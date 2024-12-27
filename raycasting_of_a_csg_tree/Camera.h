@@ -17,6 +17,8 @@ public:
 	float pitch = 0;
 	float fov = 45;
 
+	float speed = 2.0f;
+
 	Camera()
 	{
 		position = vec3(0, 0, 0);

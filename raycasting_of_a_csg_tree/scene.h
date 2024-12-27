@@ -10,51 +10,13 @@
 
 #include "Constants.h"
 #include "Camera.h"
+#include "Sphere.h"
+#include "Light.h"
+#include "Texture.h"
 
 
 using namespace glm;
 using namespace std;
-
-class Light
-{
-public:
-	Light() : position(vec3(0, 0, 0)), color(vec3(1, 1, 1)) {}
-	Light(vec3 position, vec3 color) : position(position), color(color) {}
-	vec3 position;
-	vec3 color;
-
-};
-
-class Sphere
-{
-public:
-
-	Sphere(vec3 position, float radius) : position(position), radius(radius) {}
-
-	vec3 position;
-	float radius;
-};
-
-class Texture {
-public:
-	GLuint id;
-	int width;
-	int height;
-	int channels;
-	std::vector<unsigned char> data;
-
-	Texture() : id(0), width(0), height(0), channels(0), data(0) {};
-
-	Texture(int channels, int width, int heigh, const unsigned char color) :
-		id(0),
-		channels(channels),
-		width(width),
-		height(heigh),
-		data(std::vector<unsigned char>(width* heigh* channels, color)) {};
-
-	void SetPixel(int x, int y, vec3 color);
-};
-
 
 class Scene
 {
@@ -72,8 +34,6 @@ public:
 	Camera& GetCamera() { return camera; }
 	Texture& GetTexture() { return texture; }
 	void UpdateTextureCpu();
-
-	bool RaySphereIntersection(vec3 rayOrigin, vec3 rayDirection, Sphere sphere, float& t1, float& t2);
 };
 
 
