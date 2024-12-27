@@ -119,7 +119,7 @@ void Scene::UpdateTextureCpu(Tree& tree)
 				float t1, t2;
 				if (!spheres[k].IntersectionPoint(camera.position, ray, t1, t2)) continue;
 
-				vec3 pixelPosition = camera.position + t1 * ray;
+				vec3 pixelPosition = camera.position + (t1+0.0001f) * ray;
 				if (t1 < closest && t1>0 && tree.Contains(pixelPosition, tree.GetRoot()))
 				{
 					closest = t1;
@@ -191,7 +191,7 @@ void Scene::UpdateTextureCpu(Tree& tree)
 					//color = { 255,255,255 };
 				}
 
-				vec3 pixelPosition2 = camera.position + t2 * ray;
+				vec3 pixelPosition2 = camera.position + (t2+0.0001f) * ray;
 				if (t2 < closest && t2>0 && tree.Contains(pixelPosition2, tree.GetRoot()))
 				{
 					closest = t2;

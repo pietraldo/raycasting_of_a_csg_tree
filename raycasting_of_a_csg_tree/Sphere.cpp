@@ -16,7 +16,8 @@ bool Sphere::IntersectionPoint(glm::vec3 rayOrigin, glm::vec3 rayDirection, floa
 	return true;
 }
 
+const float EPSILON = 0.0001;
 bool Sphere::Contains(glm::vec3 point)
 {
-	return length(point - position) <= radius;
+	return length(point - position) < radius;
 }
