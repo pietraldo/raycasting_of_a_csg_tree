@@ -78,7 +78,7 @@ void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, DevSphere* dev_sph
 	UpdateOnGPU(dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, dev_spheres, sphere_count, dev_projection, dev_view, dev_camera_position, dev_light_position);
 }
 
-void Scene::UpdateTextureCpu()
+void Scene::UpdateTextureCpu(Tree& tree)
 {
 	vec3 forward = normalize(camera.direction);
 	vec3 right = normalize(cross(forward, camera.up));
@@ -119,11 +119,12 @@ void Scene::UpdateTextureCpu()
 				float t1, t2;
 				if (!spheres[k].IntersectionPoint(camera.position, ray, t1, t2)) continue;
 
-				if (t1 < closest && t1>0)
+				vec3 pixelPosition = camera.position + t1 * ray;
+				if (t1 < closest && t1>0 && tree.Contains(pixelPosition, tree.GetRoot()))
 				{
 					closest = t1;
 
-					vec3 pixelPosition = camera.position + t1 * ray;
+					
 
 					bool block = false;
 
@@ -131,7 +132,8 @@ void Scene::UpdateTextureCpu()
 					float lightDistance = length(lightRay);
 					lightRay = normalize(lightRay);
 
-					for (int l = 0; l < spheres.size(); l++)
+					
+					/*for (int l = 0; l < spheres.size(); l++)
 					{
 						if (l == k) continue;
 						float t5, t6;
@@ -144,7 +146,7 @@ void Scene::UpdateTextureCpu()
 							}
 
 						}
-					}
+					}*/
 
 					float ka = 0.1; // Ambient reflection coefficient
 					float kd = 0.5; // Diffuse reflection coefficient
@@ -185,6 +187,80 @@ void Scene::UpdateTextureCpu()
 
 
 					color = spheres[k].color * col;
+					color = { 255*col,255*col,255*col };
+					//color = { 255,255,255 };
+				}
+
+				vec3 pixelPosition2 = camera.position + t2 * ray;
+				if (t2 < closest && t2>0 && tree.Contains(pixelPosition2, tree.GetRoot()))
+				{
+					closest = t2;
+
+
+
+					bool block = false;
+
+					vec3 lightRay = pixelPosition - light.position;
+					float lightDistance = length(lightRay);
+					lightRay = normalize(lightRay);
+
+
+					/*for (int l = 0; l < spheres.size(); l++)
+					{
+						if (l == k) continue;
+						float t5, t6;
+						if (spheres[l].IntersectionPoint(light.position, lightRay, t5, t6))
+						{
+							if (t5 > 0 && t5 < lightDistance)
+							{
+								block = true;
+								break;
+							}
+
+						}
+					}*/
+
+					float ka = 0.1; // Ambient reflection coefficient
+					float kd = 0.5; // Diffuse reflection coefficient
+					float ks = 0.4; // Specular reflection coefficient
+					float shininess = 10; // Shininess factor
+					float ia = 0.5; // Ambient light intensity
+					float id = 0.5; // Diffuse light intensity
+					float is = 0.5; // Specular light intensity
+
+					vec3 L = normalize(light.position - pixelPosition); // Light direction
+					vec3 N = normalize(-pixelPosition +spheres[k].position); // Normal at the point
+					vec3 V = normalize(-ray); // View direction
+					vec3 R = normalize(2.0f * dot(L, N) * N - L); // Reflection vector
+
+					// Ambient contribution
+					float ambient = ka * ia;
+
+					// Diffuse contribution (only if dot(N, L) > 0)
+					float diffuse = kd * id * dot(N, L);
+					if (diffuse < 0.0f) {
+						diffuse = 0.0f;
+					}
+
+
+					// Specular contribution (only if dot(R, V) > 0)
+					float specular = 0.0f;
+					float dotRV = dot(R, V);
+					if (dotRV > 0.0f) {
+						specular = ks * is * pow(dotRV, shininess);
+					}
+
+
+					float col = ambient + diffuse + specular;
+					if (block)
+						col = ambient;
+
+					col = clamp(col, 0.0f, 1.0f);
+
+
+					color = spheres[k].color * col;
+					color = { 255 * col,255 * col,255 * col };
+					//color = { 255,255,255 };
 				}
 
 			}

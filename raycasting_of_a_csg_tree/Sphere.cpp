@@ -15,3 +15,8 @@ bool Sphere::IntersectionPoint(glm::vec3 rayOrigin, glm::vec3 rayDirection, floa
 	t2 = (-b + sqrt(discriminant)) / (2 * a);
 	return true;
 }
+
+bool Sphere::Contains(glm::vec3 point)
+{
+	return length(point - position) <= radius;
+}

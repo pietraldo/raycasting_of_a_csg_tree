@@ -18,6 +18,7 @@
 #include "Light.h"
 #include "Texture.h"
 #include "kernels.cuh"
+#include "Tree.h"
 
 using namespace glm;
 using namespace std;
@@ -39,7 +40,7 @@ public:
 
 	Camera& GetCamera() { return camera; }
 	Texture& GetTexture() { return texture; }
-	void UpdateTextureCpu();
+	void UpdateTextureCpu(Tree& tree);
 	void UpdateTextureGpu(unsigned char* dev_tecture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count);
 };
 

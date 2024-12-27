@@ -13,5 +13,6 @@ public:
 	glm::vec3 color;
 
 	bool IntersectionPoint(glm::vec3 rayOrigin, glm::vec3 rayDirection, float& t1, float& t2);
+	bool Contains(glm::vec3 point);
 };
 
