@@ -123,14 +123,16 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 		if (t1 < closest && t1>0 && TreeContains(dev_tree, pixelPosition[0], pixelPosition[1], pixelPosition[2], 0))
 		{
 			closest = t1;
-
-			bool block = false;
+			
 
 			float lightRay[3] = { light_pos[0] - pixelPosition[0], light_pos[1] - pixelPosition[1], light_pos[2] - pixelPosition[2] };
 			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
 			NormalizeVector3(lightRay);
 
-
+			float pixelPosition1_a[3];
+			for (int i = 0; i < 3; i++)
+				pixelPosition1_a[i] = camera_pos[i] + (t1)*ray[i];
+			bool block = BlockingLightRay(spheres, sphere_count, pixelPosition1_a, lightRay, dev_tree);
 
 			float ka = 0.2; // Ambient reflection coefficient
 			float kd = 0.5; // Diffuse reflection coefficient

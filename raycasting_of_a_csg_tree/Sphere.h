@@ -7,6 +7,7 @@ public:
 
 	Sphere(glm::vec3 position, float radius, glm::vec3 color = glm::vec3(255,255,255)) : 
 		position(position), radius(radius), color(color){}
+	Sphere() : position(glm::vec3(0, 0, 0)), radius(1), color(glm::vec3(255, 255, 255)) {}
 
 	glm::vec3 position;
 	float radius;

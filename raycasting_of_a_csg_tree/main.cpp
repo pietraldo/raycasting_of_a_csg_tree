@@ -38,18 +38,25 @@ int main() {
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
-	Sphere sphere1(vec3(0, 0, 0), 4.0f);
-	Sphere sphere2(vec3(0, 0, -4), 1.0f);
+	const int SPHERE_COUNT = 20;
+	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
+
+	Sphere spheres_scene[SPHERE_COUNT];
+
+	const int sphere_render_radius = 5;
+	for (int i = 0; i < SPHERE_COUNT; i++) {
+		spheres_scene[i] = Sphere(vec3(rand() % sphere_render_radius - sphere_render_radius/2, rand() % sphere_render_radius - sphere_render_radius/2, rand() % sphere_render_radius - sphere_render_radius/2), 1.0f);
+	}
 
 	scene = Scene();
 	scene.SetCamera(Camera(vec3(0, 0, -8)));
-	scene.AddSphere(sphere1);
-	scene.AddSphere(sphere2);
+	for (int i = 0; i < SPHERE_COUNT; i++)
+		scene.AddSphere(spheres_scene[i]);
 	scene.SetLight(Light(vec3(0, 0, -4), vec3(1, 1, 1)));
 
 	window.RegisterTexture(scene.GetTexture());
 
-	const int SPHERE_COUNT = 2;
+	
 
 	DevSphere spheres[SPHERE_COUNT];
 	for (int i = 0; i < SPHERE_COUNT; i++) {
@@ -65,10 +72,16 @@ int main() {
 		spheres[i].color[2] = scene.spheres[i].color.b;
 	}
 
-	Node nodeArr[3];
-	nodeArr[2] = Node{ -1, -1, 0, 0, 0, 4, 0 };
-	nodeArr[1] = Node{ -1, -1, 0, 0, -4, 1, 0 };
-	nodeArr[0] = Node{ 2, 1, 0, 0, 0, 0, 0 };
+
+	Node nodeArr[2*SPHERE_COUNT-1];
+	for (int i = 0; i < SPHERE_COUNT; i++) {
+		nodeArr[i+SPHERE_COUNT-1] = Node{ -1, -1, spheres_scene[i].position.x, spheres_scene[i].position.y, spheres_scene[i].position.z, spheres_scene[i].radius, 0};
+	}
+	for (int i = 0; i < SPHERE_COUNT - 1; i++)
+	{
+		nodeArr[i] = Node{ i + 1, 2*SPHERE_COUNT-2-i, 0, 0, 0, 0, 2};
+	}
+	
 
 
 	//copy sphere and texture to gpu
@@ -80,17 +93,17 @@ int main() {
 	float* dev_light_postion;
 	Node* dev_tree;
 
-	cudaMalloc(&dev_tree, 3 * sizeof(Node));
+	cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
 	cudaMalloc(&dev_projection, 16 * sizeof(float));
 	cudaMalloc(&dev_view, 16 * sizeof(float));
 	cudaMalloc(&dev_camera_position, 3 * sizeof(float));
 	cudaMalloc(&dev_light_postion, 3 * sizeof(float));
 	cudaMalloc(&dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char));
-	cudaMalloc(&dev_spheres, 8 * sizeof(DevSphere));
+	cudaMalloc(&dev_spheres, SPHERE_COUNT * sizeof(DevSphere));
 
-	cudaMemcpy(dev_tree, nodeArr, 3 * sizeof(Node), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_tree, nodeArr, NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_spheres, spheres, 8 * sizeof(DevSphere), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_spheres, spheres, SPHERE_COUNT * sizeof(DevSphere), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
