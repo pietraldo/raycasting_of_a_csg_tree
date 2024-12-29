@@ -52,7 +52,7 @@ int main() {
 	spheres_scene[2] = Sphere(vec3(0, 1, 0), 1.0f);
 	spheres_scene[3] = Sphere(vec3(0, -1, 0), 1.0f);
 	spheres_scene[4] = Sphere(vec3(0, 0, 0), 1.5f);
-	spheres_scene[5] = Sphere(vec3(0, 0, 0), 0.5f);
+	spheres_scene[5] = Sphere(vec3(0.5, 0, -1), 0.5f);
 
 	scene = Scene();
 	scene.SetCamera(Camera(vec3(0, 0, -8)));
@@ -136,9 +136,9 @@ int main() {
 		window.ProccessInput(scene, dt);
 
 		float r = 100000.0f;
-		scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
+		//scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
 		//scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
-		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
+		scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
 		scene.UpdateTextureGpu(dev_texture_data, dev_spheres, dev_projection, dev_view, dev_camera_position, dev_light_postion, SPHERE_COUNT, dev_tree);
