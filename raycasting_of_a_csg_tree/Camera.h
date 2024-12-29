@@ -17,7 +17,7 @@ public:
 	float pitch = 0;
 	float fov = 45;
 
-	float speed = 2.0f;
+	float speed = 10.0f;
 
 	Camera()
 	{

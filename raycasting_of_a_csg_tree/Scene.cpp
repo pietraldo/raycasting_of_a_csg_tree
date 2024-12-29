@@ -31,7 +31,7 @@ void Texture::SetPixel(int x, int y, glm::vec3 color)
 	data[index + 2] = color.b;
 }
 
-void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count)
+void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count, Node* dev_tree)
 {
 
 	vec3 forward = normalize(camera.direction);
@@ -75,10 +75,10 @@ void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, DevSphere* dev_sph
 	cudaMemcpy(dev_camera_position, camera_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_light_position, light_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
 
-	UpdateOnGPU(dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, dev_spheres, sphere_count, dev_projection, dev_view, dev_camera_position, dev_light_position);
+	UpdateOnGPU(dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, dev_spheres, sphere_count, dev_projection, dev_view, dev_camera_position, dev_light_position, dev_tree);
 }
 
-void Scene::UpdateTextureCpu(Tree& tree)
+void Scene::UpdateTextureCpu()
 {
 	vec3 forward = normalize(camera.direction);
 	vec3 right = normalize(cross(forward, camera.up));
@@ -120,7 +120,7 @@ void Scene::UpdateTextureCpu(Tree& tree)
 				if (!spheres[k].IntersectionPoint(camera.position, ray, t1, t2)) continue;
 
 				vec3 pixelPosition = camera.position + (t1+0.0001f) * ray;
-				if (t1 < closest && t1>0 && tree.Contains(pixelPosition, tree.GetRoot()))
+				if (t1 < closest && t1>0)
 				{
 					closest = t1;
 
@@ -192,7 +192,7 @@ void Scene::UpdateTextureCpu(Tree& tree)
 				}
 
 				vec3 pixelPosition2 = camera.position + (t2+0.0001f) * ray;
-				if (t2 < closest && t2>0 && tree.Contains(pixelPosition2, tree.GetRoot()))
+				if (t2 < closest && t2>0 )
 				{
 					closest = t2;
 

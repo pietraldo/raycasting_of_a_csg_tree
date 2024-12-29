@@ -40,8 +40,8 @@ public:
 
 	Camera& GetCamera() { return camera; }
 	Texture& GetTexture() { return texture; }
-	void UpdateTextureCpu(Tree& tree);
-	void UpdateTextureGpu(unsigned char* dev_tecture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count);
+	void UpdateTextureCpu();
+	void UpdateTextureGpu(unsigned char* dev_tecture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count, Node* dev_tree);
 };
 
 

@@ -1,12 +1,12 @@
 #include "kernels.cuh"
 
-__host__ __device__ void MultiplyVectorByMatrix4(float* vector,  float* matrix)
+__host__ __device__ void MultiplyVectorByMatrix4(float* vector, float* matrix)
 {
 	float result[4] = { 0 };
 	for (int i = 0; i < 4; i++) {
 		result[i] = 0;
 		for (int j = 0; j < 4; j++) {
-			result[i] += vector[j] * matrix[i * 4 + j]; 
+			result[i] += vector[j] * matrix[i * 4 + j];
 		}
 	}
 	for (int i = 0; i < 4; i++) {
@@ -31,9 +31,29 @@ __host__ __device__ void NormalizeVector3(float* vector)
 	vector[2] /= length;
 }
 
+__host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int nodeIndex)
+{
+	
+	if (tree[nodeIndex].left == -1 && tree[nodeIndex].right == -1)
+	{
+		return SphereContains(tree[nodeIndex].x, tree[nodeIndex].y, tree[nodeIndex].z, tree[nodeIndex].radius, x, y, z);
+	}
+	else
+	{
+		bool left = TreeContains(tree, x, y, z, tree[nodeIndex].left);
+		bool right = TreeContains(tree, x, y, z, tree[nodeIndex].right);
+		if (tree[nodeIndex].operation == 0)
+			return SphereSubstraction(left, right);
+		else if (tree[nodeIndex].operation == 1)
+			return SphereIntersection(left, right);
+		else
+			return SphereUnion(left, right);
+		//return tree[nodeIndex].functionPtr(left, right);
+	}
+}
 
 __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
-	float* projection, float* view, float* camera_pos, float* light_pos)
+	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -65,14 +85,14 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 	{
 		float t1, t2;
 		if (!IntersectionPoint(&spheres[k], camera_pos, ray, t1, t2)) continue;
-		
-		if (t1 < closest && t1>0)
+
+		float pixelPosition[3];
+		for (int i = 0; i < 3; i++)
+			pixelPosition[i] = camera_pos[i] + (t1 + 0.001) * ray[i];
+
+		if (t1 < closest && t1>0 && TreeContains(dev_tree, pixelPosition[0], pixelPosition[1], pixelPosition[2], 0))
 		{
 			closest = t1;
-
-			float pixelPosition[3];
-			for (int i = 0; i < 3; i++)
-				pixelPosition[i] = camera_pos[i] + t1 * ray[i];
 
 			bool block = false;
 
@@ -80,20 +100,7 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
 			NormalizeVector3(lightRay);
 
-			for (int l = 0; l < sphere_count; l++)
-			{
-				if (l == k) continue;
-				float t5, t6;
-				if (IntersectionPoint(&spheres[l], light_pos, lightRay, t5, t6))
-				{
-					if (t5 > 0 && t5 < lightDistance)
-					{
-						block = true;
-						break;
-					}
 
-				}
-			}
 
 			float ka = 0.2; // Ambient reflection coefficient
 			float kd = 0.5; // Diffuse reflection coefficient
@@ -145,7 +152,78 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 			color[2] = spheres[k].color[2] * col;
 		}
 
+
+		float pixelPosition2[3];
+		for (int i = 0; i < 3; i++)
+			pixelPosition2[i] = camera_pos[i] + (t2 + 0.001) * ray[i];
+
+		if (t2 < closest && t2>0 && TreeContains(dev_tree, pixelPosition2[0], pixelPosition2[1], pixelPosition2[2], 0))
+		{
+			closest = t2;
+
+			bool block = false;
+
+			float lightRay[3] = { light_pos[0] - pixelPosition[0], light_pos[1] - pixelPosition[1], light_pos[2] - pixelPosition[2] };
+			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
+			NormalizeVector3(lightRay);
+
+
+
+			float ka = 0.2; // Ambient reflection coefficient
+			float kd = 0.5; // Diffuse reflection coefficient
+			float ks = 0.4; // Specular reflection coefficient
+			float shininess = 10; // Shininess factor
+			float ia = 0.6; // Ambient light intensity
+			float id = 0.5; // Diffuse light intensity
+			float is = 0.5; // Specular light intensity
+
+			float L[3] = { light_pos[0] - pixelPosition[0], light_pos[1] - pixelPosition[1], light_pos[2] - pixelPosition[2] };
+			NormalizeVector3(L);
+			float N[3] = { -pixelPosition[0] + spheres[k].position[0], -pixelPosition[1] + spheres[k].position[1], -pixelPosition[2] + spheres[k].position[2] };
+			NormalizeVector3(N);
+			float V[3] = { -ray[0], -ray[1], -ray[2] };
+			NormalizeVector3(V);
+			float R[3] = { 2.0f * dot3(L, N) * N[0] - L[0], 2.0f * dot3(L, N) * N[1] - L[1], 2.0f * dot3(L, N) * N[2] - L[2] };
+			NormalizeVector3(R);
+
+			// Ambient contribution
+			float ambient = ka * ia;
+
+			// Diffuse contribution (only if dot(N, L) > 0)
+			float diffuse = kd * id * dot3(N, L);
+			if (diffuse < 0.0f) {
+				diffuse = 0.0f;
+			}
+
+
+			// Specular contribution (only if dot(R, V) > 0)
+			float specular = 0.0f;
+			float dotRV = dot3(R, V);
+			if (dotRV > 0.0f) {
+				specular = ks * is * pow(dotRV, shininess);
+			}
+
+
+			float col = ambient + diffuse + specular;
+			if (block)
+				col = ambient;
+
+			if (col < 0)
+				col = 0;
+			if (col > 1)
+				col = 1;
+
+
+			color[0] = spheres[k].color[0] * col;
+			color[1] = spheres[k].color[1] * col;
+			color[2] = spheres[k].color[2] * col;
+		}
+
+
+
+
 	}
+
 
 	int index = 3 * (y * width + x);
 	dev_texture_data[index] = color[0];
@@ -154,12 +232,12 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 }
 
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height, DevSphere* devSpheres,
-	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos)
+	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree)
 {
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-	UpdatePixel << <grid, block >> > (dev_texture_data, width, height, devSpheres, sphere_count, projection, view, camera_pos, light_pos);
+	UpdatePixel << <grid, block >> > (dev_texture_data, width, height, devSpheres, sphere_count, projection, view, camera_pos, light_pos, dev_tree);
 	cudaDeviceSynchronize();
 }
 
@@ -183,4 +261,24 @@ __host__ __device__ bool IntersectionPoint(DevSphere* sphere, float* rayOrigin, 
 __host__ __device__ float dot3(float* a, float* b)
 {
 	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+__host__ __device__ bool SphereSubstraction(bool a, bool b)
+{
+	return a && !b;
+}
+
+__host__ __device__ bool SphereIntersection(bool a, bool b)
+{
+	return a && b;
+}
+
+__host__ __device__ bool SphereUnion(bool a, bool b)
+{
+	return a || b;
+}
+
+__host__ __device__ bool SphereContains(float sx, float sy, float sz, float sr, float x, float y, float z)
+{
+	return (x - sx) * (x - sx) + (y - sy) * (y - sy) + (z - sz) * (z - sz) < sr * sr;
 }
