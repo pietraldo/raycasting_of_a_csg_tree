@@ -38,12 +38,12 @@ int main() {
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
-	const int SPHERE_COUNT = 20;
+	const int SPHERE_COUNT = 30;
 	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
 
 	Sphere spheres_scene[SPHERE_COUNT];
 
-	const int sphere_render_radius = 5;
+	const int sphere_render_radius = 10;
 	for (int i = 0; i < SPHERE_COUNT; i++) {
 		spheres_scene[i] = Sphere(vec3(rand() % sphere_render_radius - sphere_render_radius/2, rand() % sphere_render_radius - sphere_render_radius/2, rand() % sphere_render_radius - sphere_render_radius/2), 1.0f);
 	}
@@ -77,9 +77,21 @@ int main() {
 	for (int i = 0; i < SPHERE_COUNT; i++) {
 		nodeArr[i+SPHERE_COUNT-1] = Node{ -1, -1, spheres_scene[i].position.x, spheres_scene[i].position.y, spheres_scene[i].position.z, spheres_scene[i].radius, 0};
 	}
+	int row = 0;
+	int col = 0;
 	for (int i = 0; i < SPHERE_COUNT - 1; i++)
 	{
-		nodeArr[i] = Node{ i + 1, 2*SPHERE_COUNT-2-i, 0, 0, 0, 0, 2};
+		
+		nodeArr[i] = Node{i+ (int)pow(2,row)+col, i+(int)pow(2,row) + col+1, 0, 0, 0, 0, 2};
+		if (col == (int)pow(2, row)-1)
+		{
+			row++;
+			col = 0;
+		}
+		else
+		{
+			col++;
+		}
 	}
 	
 
@@ -112,7 +124,7 @@ int main() {
 
 		window.ProccessInput(scene, dt);
 
-		float r = 10.0f;
+		float r = 100000.0f;
 		scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
 		//scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
 		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
