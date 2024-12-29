@@ -52,13 +52,25 @@ void Window::ProccessKeys(Scene& scene, float dt)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.position += camera.direction * camera.speed * dt;
+	{
+		if(camera.rotateScene)
+			camera.r -= camera.speed * dt;
+		else
+			camera.position += camera.direction * camera.speed * dt;
+	}
+		
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.position -= camera.direction * camera.speed * dt;
+	{
+		if(camera.rotateScene)
+			camera.r += camera.speed * dt;
+		else
+			camera.position -= camera.direction * camera.speed * dt;
+	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 		camera.position -= glm::normalize(glm::cross(camera.direction, camera.up)) * camera.speed * dt;
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		camera.position += glm::normalize(glm::cross(camera.direction, camera.up)) * camera.speed * dt;
+	camera.UpdatePosition();
 }
 
 void Window::ProccessMouse(Scene& scene, float dt)
@@ -94,11 +106,8 @@ void Window::ProccessMouse(Scene& scene, float dt)
 	if (camera.pitch < -89.0f)
 		camera.pitch = -89.0f;
 
-	glm::vec3 direction;
-	direction.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-	direction.y = sin(glm::radians(camera.pitch));
-	direction.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
-	camera.direction = glm::normalize(direction);
+	camera.UpdatePosition();
+	
 }
 
 void Window::Render(Scene& scene)
@@ -127,6 +136,9 @@ void Window::Render(Scene& scene)
 	ImGui::Text("Camera Yaw: %f", scene.GetCamera().yaw);
 	ImGui::Text("Camera Pitch: %f", scene.GetCamera().pitch);
 	ImGui::SliderFloat("Angle", &scene.angle, 0, 2 * 3.14159265);
+	ImGui::SliderFloat("Angle Right", &scene.GetCamera().yaw, 0, 360);
+	ImGui::SliderFloat("Angle Up", &scene.GetCamera().pitch, 0, 360);
+	ImGui::Checkbox("Rotate Scene", &scene.GetCamera().rotateScene);
 	ImGui::End();
 
 

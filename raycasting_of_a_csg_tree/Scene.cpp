@@ -34,21 +34,6 @@ void Texture::SetPixel(int x, int y, glm::vec3 color)
 void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count, Node* dev_tree)
 {
 
-	vec3 forward = normalize(camera.direction);
-	vec3 right = normalize(cross(forward, camera.up));
-	vec3 up = normalize(cross(right, forward));
-
-	float translationX = dot(camera.position, right);
-	float translationY = dot(camera.position, up);
-	float translationZ = dot(camera.position, forward);
-
-	mat4 viewMatrix = mat4(
-		vec4(right.x, up.x, -forward.x, 0),
-		vec4(right.y, up.y, -forward.y, 0),
-		vec4(right.z, up.z, -forward.z, 0),
-		vec4(-translationX, -translationY, translationZ, 1)
-	);
-
 	// Matrix that transforms from camera space to screen space
 	mat4 view = glm::inverse(glm::lookAt(camera.position, camera.position + camera.direction, camera.up));
 	mat4 projection = glm::inverse(glm::perspectiveFov(glm::radians(camera.fov), (float)texture.width, (float)texture.height, 0.1f, 10.0f));

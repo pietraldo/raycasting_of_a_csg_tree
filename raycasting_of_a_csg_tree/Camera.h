@@ -17,6 +17,10 @@ public:
 	float pitch = 0;
 	float fov = 45;
 
+	float r = 10;
+
+	bool rotateScene = true;
+
 	float speed = 10.0f;
 
 	Camera()
@@ -29,6 +33,7 @@ public:
 		this->position = position;
 		direction = vec3(0, 0, 1);
 	}
+	void UpdatePosition();
 	~Camera() = default;
 };
 
