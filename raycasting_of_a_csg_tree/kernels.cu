@@ -51,7 +51,20 @@ __host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int
 		//return tree[nodeIndex].functionPtr(left, right);
 	}
 }
+__device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree)
+{
+	for (int k = 0; k < sphere_count; k++)
+	{
+		float t1, t2;
+		if (!IntersectionPoint(&spheres[k], pixelPosition, lightRay, t1, t2)) continue;
 
+		if (t1 > 0 && TreeContains(dev_tree, pixelPosition[0], pixelPosition[1], pixelPosition[2], 0))
+		{
+			return true;
+
+		}
+	}
+}
 __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
 	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree)
 {
@@ -156,18 +169,23 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 		float pixelPosition2[3];
 		for (int i = 0; i < 3; i++)
 			pixelPosition2[i] = camera_pos[i] + (t2 + 0.001) * ray[i];
+		
+		
 
 		if (t2 < closest && t2>0 && TreeContains(dev_tree, pixelPosition2[0], pixelPosition2[1], pixelPosition2[2], 0))
 		{
 			closest = t2;
 
-			bool block = false;
-
-			float lightRay[3] = { light_pos[0] - pixelPosition[0], light_pos[1] - pixelPosition[1], light_pos[2] - pixelPosition[2] };
+			
+			float lightRay[3] = { light_pos[0] - pixelPosition2[0], light_pos[1] - pixelPosition2[1], light_pos[2] - pixelPosition2[2] };
 			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
 			NormalizeVector3(lightRay);
 
-
+			float pixelPosition2_a[3];
+			for (int i = 0; i < 3; i++)
+				pixelPosition2_a[i] = camera_pos[i] + (t2)*ray[i]+0.001*lightRay[i];
+			//bool block = BlockingLightRay(spheres, sphere_count, pixelPosition2_a, lightRay, dev_tree);
+			bool block = false;
 
 			float ka = 0.2; // Ambient reflection coefficient
 			float kd = 0.5; // Diffuse reflection coefficient

@@ -15,6 +15,8 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height, DevSphere* devSpheres,
 	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree);
 
+__device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree);
+
 __host__ __device__ bool IntersectionPoint(DevSphere* sphere, float* rayOrigin, float* rayDirection, float& t1, float& t2);
 
 __host__ __device__ float dot3(float* a, float* b);
