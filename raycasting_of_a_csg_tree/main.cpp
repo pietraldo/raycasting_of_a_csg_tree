@@ -31,7 +31,7 @@ Scene scene;
 // Main function
 int main() {
 
-	
+
 
 
 	Window window(SCR_WIDTH, SCR_HEIGHT);
@@ -67,7 +67,7 @@ int main() {
 
 	Node nodeArr[3];
 	nodeArr[2] = Node{ -1, -1, 0, 0, 0, 4, 0 };
-	nodeArr[1] = Node{ -1, -1, 0, 0, -4, 1, 0};
+	nodeArr[1] = Node{ -1, -1, 0, 0, -4, 1, 0 };
 	nodeArr[0] = Node{ 2, 1, 0, 0, 0, 0, 0 };
 
 
@@ -100,7 +100,8 @@ int main() {
 		window.ProccessInput(scene, dt);
 
 		float r = 10.0f;
-		scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
+		scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
+		//scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
 		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 

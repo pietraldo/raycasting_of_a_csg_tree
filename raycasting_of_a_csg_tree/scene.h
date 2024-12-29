@@ -31,6 +31,9 @@ class Scene
 	Texture texture;
 
 public:
+
+	float angle = 0;
+
 	vector<Sphere> spheres;
 
 	Scene();

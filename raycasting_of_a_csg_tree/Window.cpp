@@ -126,6 +126,7 @@ void Window::Render(Scene& scene)
 	ImGui::Text("Camera Direction: %f %f %f", scene.GetCamera().direction.x, scene.GetCamera().direction.y, scene.GetCamera().direction.z);
 	ImGui::Text("Camera Yaw: %f", scene.GetCamera().yaw);
 	ImGui::Text("Camera Pitch: %f", scene.GetCamera().pitch);
+	ImGui::SliderFloat("Angle", &scene.angle, 0, 2 * 3.14159265);
 	ImGui::End();
 
 

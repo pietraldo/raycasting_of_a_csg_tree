@@ -33,7 +33,7 @@ __host__ __device__ void NormalizeVector3(float* vector)
 
 __host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int nodeIndex)
 {
-	
+
 	if (tree[nodeIndex].left == -1 && tree[nodeIndex].right == -1)
 	{
 		return SphereContains(tree[nodeIndex].x, tree[nodeIndex].y, tree[nodeIndex].z, tree[nodeIndex].radius, x, y, z);
@@ -53,17 +53,34 @@ __host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int
 }
 __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree)
 {
+	
+	pixelPosition[0] += 0.001 * lightRay[0];
+	pixelPosition[1] += 0.001 * lightRay[1];
+	pixelPosition[2] += 0.001 * lightRay[2];
 	for (int k = 0; k < sphere_count; k++)
 	{
 		float t1, t2;
 		if (!IntersectionPoint(&spheres[k], pixelPosition, lightRay, t1, t2)) continue;
 
-		if (t1 > 0 && TreeContains(dev_tree, pixelPosition[0], pixelPosition[1], pixelPosition[2], 0))
+		float intersection1[3];
+		for (int i = 0; i < 3; i++)
+			intersection1[i] = pixelPosition[i] + (t1 + 0.001) * lightRay[i];
+
+		if (t1>0 && TreeContains(dev_tree, intersection1[0], intersection1[1], intersection1[2], 0))
 		{
 			return true;
+		}
 
+		float intersection2[3];
+		for (int i = 0; i < 3; i++)
+			intersection2[i] = pixelPosition[i] + (t2 - 0.001) * lightRay[i];
+
+		if (t2>0&&TreeContains(dev_tree, intersection2[0], intersection2[1], intersection2[2], 0))
+		{
+			return true;
 		}
 	}
+	return false;
 }
 __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
 	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree)
@@ -169,23 +186,23 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 		float pixelPosition2[3];
 		for (int i = 0; i < 3; i++)
 			pixelPosition2[i] = camera_pos[i] + (t2 + 0.001) * ray[i];
-		
-		
+
+
 
 		if (t2 < closest && t2>0 && TreeContains(dev_tree, pixelPosition2[0], pixelPosition2[1], pixelPosition2[2], 0))
 		{
 			closest = t2;
 
-			
+
 			float lightRay[3] = { light_pos[0] - pixelPosition2[0], light_pos[1] - pixelPosition2[1], light_pos[2] - pixelPosition2[2] };
 			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
 			NormalizeVector3(lightRay);
 
 			float pixelPosition2_a[3];
 			for (int i = 0; i < 3; i++)
-				pixelPosition2_a[i] = camera_pos[i] + (t2)*ray[i]+0.001*lightRay[i];
-			//bool block = BlockingLightRay(spheres, sphere_count, pixelPosition2_a, lightRay, dev_tree);
-			bool block = false;
+				pixelPosition2_a[i] = camera_pos[i] + (t2)*ray[i];
+			bool block = BlockingLightRay(spheres, sphere_count, pixelPosition2_a, lightRay, dev_tree);
+
 
 			float ka = 0.2; // Ambient reflection coefficient
 			float kd = 0.5; // Diffuse reflection coefficient
@@ -195,9 +212,9 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 			float id = 0.5; // Diffuse light intensity
 			float is = 0.5; // Specular light intensity
 
-			float L[3] = { light_pos[0] - pixelPosition[0], light_pos[1] - pixelPosition[1], light_pos[2] - pixelPosition[2] };
+			float L[3] = { light_pos[0] - pixelPosition2[0], light_pos[1] - pixelPosition2[1], light_pos[2] - pixelPosition2[2] };
 			NormalizeVector3(L);
-			float N[3] = { -pixelPosition[0] + spheres[k].position[0], -pixelPosition[1] + spheres[k].position[1], -pixelPosition[2] + spheres[k].position[2] };
+			float N[3] = { -pixelPosition2[0] + spheres[k].position[0], -pixelPosition2[1] + spheres[k].position[1], -pixelPosition2[2] + spheres[k].position[2] };
 			NormalizeVector3(N);
 			float V[3] = { -ray[0], -ray[1], -ray[2] };
 			NormalizeVector3(V);
@@ -235,11 +252,12 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 			color[0] = spheres[k].color[0] * col;
 			color[1] = spheres[k].color[1] * col;
 			color[2] = spheres[k].color[2] * col;
+
+			/*if (block)
+				color[0] = color[1] = color[2] = 0.0f;
+			if(!block)
+				color[0] = color[1] = color[2] = 255.0f;*/
 		}
-
-
-
-
 	}
 
 
