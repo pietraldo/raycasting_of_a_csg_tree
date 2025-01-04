@@ -53,7 +53,7 @@ __host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int
 }
 __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree)
 {
-	
+
 	pixelPosition[0] += 0.001 * lightRay[0];
 	pixelPosition[1] += 0.001 * lightRay[1];
 	pixelPosition[2] += 0.001 * lightRay[2];
@@ -66,7 +66,7 @@ __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float*
 		for (int i = 0; i < 3; i++)
 			intersection1[i] = pixelPosition[i] + (t1 + 0.001) * lightRay[i];
 
-		if (t1>0 && TreeContains(dev_tree, intersection1[0], intersection1[1], intersection1[2], 0))
+		if (t1 > 0 && TreeContains(dev_tree, intersection1[0], intersection1[1], intersection1[2], 0))
 		{
 			return true;
 		}
@@ -75,7 +75,7 @@ __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float*
 		for (int i = 0; i < 3; i++)
 			intersection2[i] = pixelPosition[i] + (t2 - 0.001) * lightRay[i];
 
-		if (t2>0&&TreeContains(dev_tree, intersection2[0], intersection2[1], intersection2[2], 0))
+		if (t2 > 0 && TreeContains(dev_tree, intersection2[0], intersection2[1], intersection2[2], 0))
 		{
 			return true;
 		}
@@ -88,6 +88,50 @@ __global__ void child()
 	int i = threadIdx.x;
 	//printf("Hello from child\n");
 }
+
+__global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* result)
+{
+	//__shared__ bool results[128];
+	//printf("Hello from GoTree\n");
+	//int index = threadIdx.x + sphere_count - 1;
+	//if (index >= 2 * sphere_count - 1)
+	//	return;
+
+
+	//// first is a leaf
+	//results[index] = SphereContains(arr[index].x, arr[index].y, arr[index].z, arr[index].radius, point.x, point.y, point.z);
+	//__syncthreads();
+	////printf("index %d:  %d\n", index, results[index]);
+
+	//int prev = index;
+	//index = arr[index].parent;
+
+	//while (index != -1)
+	//{
+
+	//	if (arr[index].right == prev) return;
+
+	//	if (arr[index].operation == 0)
+	//		results[index] = SphereSubstraction(results[arr[index].right], results[arr[index].left]);
+	//	else if (arr[index].operation == 1)
+	//		results[index] = SphereIntersection(results[arr[index].right], results[arr[index].left]);
+	//	else
+	//		results[index] = SphereUnion(results[arr[index].right], results[arr[index].left]);
+	//	__syncthreads();
+	//	//printf("index %d:  %d\n", index, results[index]);
+
+	//	if (index == 0)
+	//	{
+	//		/**result = results[index];*/
+	//		return;
+	//	}
+
+	//	prev = index;
+	//	index = arr[index].parent;
+	//}
+	//
+}
+
 __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
 	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree)
 {
@@ -96,8 +140,6 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 
 	if (x >= width || y >= height)
 		return;
-
-	child << <1, 1 >> > ();
 
 	float stepX = 2 / (float)width;
 	float stepY = 2 / (float)height;
@@ -128,10 +170,11 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 		for (int i = 0; i < 3; i++)
 			pixelPosition[i] = camera_pos[i] + (t1 + 0.001) * ray[i];
 
+		
 		if (t1 < closest && t1>0 && TreeContains(dev_tree, pixelPosition[0], pixelPosition[1], pixelPosition[2], 0))
 		{
 			closest = t1;
-			
+
 
 			float lightRay[3] = { light_pos[0] - pixelPosition[0], light_pos[1] - pixelPosition[1], light_pos[2] - pixelPosition[2] };
 			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
@@ -193,11 +236,11 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 		}
 
 
+
 		float pixelPosition2[3];
 		for (int i = 0; i < 3; i++)
 			pixelPosition2[i] = camera_pos[i] + (t2 + 0.001) * ray[i];
-
-
+		
 
 		if (t2 < closest && t2>0 && TreeContains(dev_tree, pixelPosition2[0], pixelPosition2[1], pixelPosition2[2], 0))
 		{
@@ -263,13 +306,9 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 			color[1] = spheres[k].color[1] * col;
 			color[2] = spheres[k].color[2] * col;
 
-			/*if (block)
-				color[0] = color[1] = color[2] = 0.0f;
-			if(!block)
-				color[0] = color[1] = color[2] = 255.0f;*/
+		
 		}
 	}
-
 
 	int index = 3 * (y * width + x);
 	dev_texture_data[index] = color[0];
@@ -285,6 +324,24 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height, DevSphe
 
 	UpdatePixel << <grid, block >> > (dev_texture_data, width, height, devSpheres, sphere_count, projection, view, camera_pos, light_pos, dev_tree);
 	cudaDeviceSynchronize();
+
+
+	/*bool* dev_result;
+	cudaMalloc(&dev_result, sizeof(bool));
+
+	GoTree << <1, 128 >> > (dev_tree, make_float3(1.489769, 10.117502, -0.117502), sphere_count, dev_result);
+	if (cudaGetLastError() != cudaSuccess)
+		printf("Error: %s\n", cudaGetErrorString(cudaGetLastError()));
+
+	cudaDeviceSynchronize();
+
+	bool result;
+	cudaMemcpy(&result, dev_result, sizeof(bool), cudaMemcpyDeviceToHost);
+
+	printf("Result: %d\n", result);
+
+	cudaFree(dev_result);*/
+
 }
 
 __host__ __device__ bool IntersectionPoint(DevSphere* sphere, float* rayOrigin, float* rayDirection, float& t1, float& t2)

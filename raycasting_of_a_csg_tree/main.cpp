@@ -62,7 +62,7 @@ int main() {
 
 	window.RegisterTexture(scene.GetTexture());
 
-	
+
 
 	DevSphere spheres[SPHERE_COUNT];
 	for (int i = 0; i < SPHERE_COUNT; i++) {
@@ -79,15 +79,15 @@ int main() {
 	}
 
 
-	Node nodeArr[2*SPHERE_COUNT-1];
+	Node nodeArr[2 * SPHERE_COUNT - 1];
 	for (int i = 0; i < SPHERE_COUNT; i++) {
-		nodeArr[i+SPHERE_COUNT-1] = Node{ -1, -1, spheres_scene[i].position.x, spheres_scene[i].position.y, spheres_scene[i].position.z, spheres_scene[i].radius, 0};
+		nodeArr[i + SPHERE_COUNT - 1] = Node{ -1, -1, 0, spheres_scene[i].position.x, spheres_scene[i].position.y, spheres_scene[i].position.z, spheres_scene[i].radius, 0 };
 	}
 	/*int row = 0;
 	int col = 0;
 	for (int i = 0; i < SPHERE_COUNT - 1; i++)
 	{
-		
+
 		nodeArr[i] = Node{i+ (int)pow(2,row)+col, i+(int)pow(2,row) + col+1, 0, 0, 0, 0, 2};
 		if (col == (int)pow(2, row)-1)
 		{
@@ -100,11 +100,18 @@ int main() {
 		}
 	}*/
 
-	nodeArr[0] = Node{ 1,10,0,0,0,0,0 };
-	nodeArr[1] = Node{ 2,9,0,0,0,0,1 };
-	nodeArr[2] = Node{ 3,4,0,0,0,0,2 };
-	nodeArr[3] = Node{ 6,5,0,0,0,0,2 };
-	nodeArr[4] = Node{ 8,7,0,0,0,0,2 };
+	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,0 };
+	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
+	nodeArr[2] = Node{ 3,4,1,0,0,0,0,2 };
+	nodeArr[3] = Node{ 6,5,2,0,0,0,0,2 };
+	nodeArr[4] = Node{ 8,7,2,0,0,0,0,2 };
+
+	nodeArr[5].parent = 3;
+	nodeArr[6].parent = 3;
+	nodeArr[7].parent = 4;
+	nodeArr[8].parent = 4;
+	nodeArr[9].parent = 1;
+	nodeArr[10].parent = 0;
 
 
 	//copy sphere and texture to gpu

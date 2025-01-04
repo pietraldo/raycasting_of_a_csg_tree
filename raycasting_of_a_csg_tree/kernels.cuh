@@ -8,6 +8,9 @@
 
 //__global__ void UpdatePixel(unsigned char* dev_texture_data);
 //void UpdateTextureOnGPU(unsigned char* dev_texture_data);
+
+__global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* results);
+
 __global__ void child();
 __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
 	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree);
