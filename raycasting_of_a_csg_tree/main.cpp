@@ -123,13 +123,47 @@ int main() {
 	float* dev_light_postion;
 	Node* dev_tree;
 
-	cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
-	cudaMalloc(&dev_projection, 16 * sizeof(float));
-	cudaMalloc(&dev_view, 16 * sizeof(float));
-	cudaMalloc(&dev_camera_position, 3 * sizeof(float));
-	cudaMalloc(&dev_light_postion, 3 * sizeof(float));
-	cudaMalloc(&dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char));
-	cudaMalloc(&dev_spheres, SPHERE_COUNT * sizeof(DevSphere));
+	float* dev_intersecion_points;
+	float* dev_intersection_result;
+
+	cudaError_t err;
+	err=cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_projection, 16 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_view, 16 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_camera_position, 3 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_light_postion, 3 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_spheres, SPHERE_COUNT * sizeof(DevSphere));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_intersecion_points, TEXTURE_WIDHT * TEXTURE_HEIGHT * SPHERE_COUNT * 2 *  sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&dev_intersection_result, TEXTURE_WIDHT * TEXTURE_HEIGHT *  sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	
 
 	cudaMemcpy(dev_tree, nodeArr, NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
@@ -148,7 +182,7 @@ int main() {
 		scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
-		scene.UpdateTextureGpu(dev_texture_data, dev_spheres, dev_projection, dev_view, dev_camera_position, dev_light_postion, SPHERE_COUNT, dev_tree);
+		scene.UpdateTextureGpu(dev_texture_data, dev_spheres, dev_projection, dev_view, dev_camera_position, dev_light_postion, SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result);
 		//scene.UpdateTextureCpu(tree);
 
 		// copy texture to cpu
@@ -160,6 +194,8 @@ int main() {
 
 		window.ClearScreen();
 		window.Render(scene);
+
+		//_sleep(100000);
 	}
 
 	/*cudaFree(dev_spheres);
@@ -175,7 +211,7 @@ float GetTimePassed(float& last) {
 	auto time = glfwGetTime();
 	float dt = time - last;
 	last = time;
-	std::cout << 1 / dt << std::endl;
+	//std::cout << 1 / dt << std::endl;
 	return dt;
 }
 
