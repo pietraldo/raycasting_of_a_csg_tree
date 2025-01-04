@@ -82,6 +82,12 @@ __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float*
 	}
 	return false;
 }
+
+__global__ void child()
+{
+	int i = threadIdx.x;
+	//printf("Hello from child\n");
+}
 __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
 	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree)
 {
@@ -90,6 +96,8 @@ __global__ void UpdatePixel(unsigned char* dev_texture_data, int width, int heig
 
 	if (x >= width || y >= height)
 		return;
+
+	child << <1, 1 >> > ();
 
 	float stepX = 2 / (float)width;
 	float stepY = 2 / (float)height;
