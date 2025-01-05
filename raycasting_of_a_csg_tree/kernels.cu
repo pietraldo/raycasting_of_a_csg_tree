@@ -331,7 +331,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	for (int i = 0; i < 2 * sphere_count; i++)
 		if (sphereIntersections[i] > 0)
 		{
-			dev_intersection_result[x + y * width] = sphereIntersections[0];
+			dev_intersection_result[x + y * width] = sphereIntersections[i];
 			return;
 		}
 			
@@ -430,10 +430,14 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	if (x >= width || y >= height)
 		return;
 
-	float colorf = dev_intersection_result[x + y * width];
+	float colorf = (15-dev_intersection_result[x + y * width])/15.0f*255;
+
+	if (x == 400 && y == 300)
+		printf("colorf: %f\n", colorf);
 
 	unsigned char color = (colorf < 100 & colorf>0) ? 255 : 0;
-	color = color - (int)(colorf * 100);
+	
+	color = (int)colorf;
 
 
 
