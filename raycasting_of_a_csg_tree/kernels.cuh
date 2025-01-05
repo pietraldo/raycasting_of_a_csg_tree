@@ -16,14 +16,14 @@ __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sp
 	float* projection, float* view, float* camera_pos, Node* dev_tree, float* dev_intersecion_points);
 
 
-__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
+__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* parts);
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
 	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
 
 
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
-	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
+	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts);
 
 __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree);
 

@@ -131,28 +131,212 @@ __global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* resul
 	}
 
 }
-__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
+__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, 
+	float* dev_intersection_result, int* parts)
 {
 	int x = blockIdx.x;
 	int y = blockIdx.y;
 	if (x >= width || y >= height)
 		return;
 
-	if(threadIdx.x!=0)
+	if (threadIdx.x >= sphere_count)
 		return;
 
-	int iindex = (x + y * width) * sphere_count * 2;
+	const int sphereCount = 128; // TODO: change to sphere_count
+	__shared__ float sphereIntersections[2 * sphereCount]; // 2 floats for each sphere
+	__shared__ float tempArray[2 * sphereCount]; // 2 floats for each sphere
+	__shared__ bool isReady[2 * sphereCount - 1];
 
-	float* sphereIntersections = dev_intersecion_points + iindex;
-
-	float min = 10000;
-	for (int i = 0; i < sphere_count; i++)
+	if (threadIdx.x == 0)  // Only one thread initializes shared memory
 	{
-		if (sphereIntersections[2 * i] < min && sphereIntersections[2 * i]>0)
-			min = sphereIntersections[2 * i];
+		for (int i = 0; i < 2 * sphere_count - 1; i++)
+		{
+			isReady[i] = false;
+		}
 	}
 
-	dev_intersection_result[x + y * width] = min;
+	__syncthreads();
+
+
+
+
+	int sphereIndex = threadIdx.x;
+	int nodeIndex = sphereIndex + sphere_count - 1;
+
+	float* dev_sphereIntersections = dev_intersecion_points + (x + y * width) * sphere_count * 2;
+	float t1 = dev_sphereIntersections[2 * sphereIndex];
+	float t2 = dev_sphereIntersections[2 * sphereIndex + 1];
+
+	sphereIntersections[2*sphereIndex] = t1;
+	sphereIntersections[2*sphereIndex + 1] = t2;
+
+	isReady[nodeIndex] = true;
+
+	__syncthreads();
+	
+	
+
+
+	int prev = nodeIndex;
+	nodeIndex = dev_tree[nodeIndex].parent;
+
+
+	
+
+	while (nodeIndex != -1)
+	{
+		
+		if (dev_tree[nodeIndex].right == prev) return;
+
+		
+
+		bool makeOperation = isReady[dev_tree[nodeIndex].right];
+		if (makeOperation)
+		{
+			
+			if (dev_tree[nodeIndex].operation == 0) 
+			{
+				// TODO: make substraction
+			}
+			else if (dev_tree[nodeIndex].operation == 1)
+			{
+				// TODO: make intersection
+			}
+			else
+			{
+				
+			/*	if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
+				{
+					printf("x: %d, y: %d\n", x, y);
+					for (int k = 0; k < 2 * sphere_count; k++)
+						printf("%.2f ", sphereIntersections[k]);
+					printf("\n");
+				}*/
+				if (blockIdx.x == 400 && blockIdx.y == 300)
+					printf("nodeIndex: %d\n", nodeIndex);
+				
+
+				// TODO: make union
+				//punkty znajduja sie w lewym od indeksu a do b, w prawym od c do d
+				int p1= parts[4*nodeIndex];
+				int k1 = parts[4 * nodeIndex + 1];
+				int p2 = parts[4 * nodeIndex + 2];
+				int k2 = parts[4 * nodeIndex + 3];
+				/*if (blockIdx.x == 400 && blockIdx.y == 300)
+					printf("p1: %d, k1: %d, p2: %d, k2: %d\n", p1, k1, p2, k2);*/
+				
+				// sort by start time
+				int list1Index = p1;
+				int list2Index = p2;
+				for (int i = p1; i <= k2; i+=2)
+				{
+					if (list1Index > k1)
+					{
+						tempArray[i] = sphereIntersections[list2Index];
+						tempArray[i+1] = sphereIntersections[list2Index+1];
+						list2Index += 2;
+						continue;
+					}
+					if (list2Index > k2)
+					{
+						tempArray[i] = sphereIntersections[list1Index];
+						tempArray[i+1] = sphereIntersections[list1Index+1];
+						list1Index += 2;
+						continue;
+					}
+
+					if (sphereIntersections[list2Index] < sphereIntersections[list1Index])
+					{
+						tempArray[i] = sphereIntersections[list2Index];
+						tempArray[i+1] = sphereIntersections[list2Index+1];
+						list2Index+=2;
+					}
+					else
+					{
+						tempArray[i] = sphereIntersections[list1Index];
+						tempArray[i+1] = sphereIntersections[list1Index+1];
+						list1Index += 2;
+					}
+				}
+
+				/*if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
+				{
+					for (int k = 0; k < 2 * sphere_count; k++)
+						printf("%.2f ", tempArray[k]);
+					printf("\n");
+				}*/
+
+
+				float start = tempArray[p1];
+				float end = tempArray[p1+1];
+				int addIndex = p1;
+				for (int i = p1+2; i <= k2; i+=2)
+				{
+					float currentStart = tempArray[i];
+					float currentEnd = tempArray[i + 1];
+					if (currentStart > end)
+					{
+						sphereIntersections[addIndex] = start;
+						sphereIntersections[addIndex + 1] = end;
+						addIndex += 2;
+						start = currentStart;
+						end = currentEnd;
+					}
+					else
+					{
+						if (currentEnd > end)
+							end = currentEnd;
+					}
+				}
+				sphereIntersections[addIndex] = start;
+				sphereIntersections[addIndex + 1] = end;
+				addIndex += 2;
+				
+				
+				for (int i = addIndex; i <= k2; i++)
+				{
+					sphereIntersections[i] = 0;
+				}
+
+				if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
+				{
+					/*for (int k = 0; k < 2 * sphere_count; k++)
+						printf("%.2f ", sphereIntersections[k]);
+					printf("\n");*/
+					printf("\n");
+				}
+
+			}
+			isReady[nodeIndex] = true;
+		}
+		__syncthreads();
+
+		if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
+		{
+			for (int k = 0; k < 2 * sphere_count; k++)
+				printf("%.2f ", sphereIntersections[k]);
+			printf("\n");
+			printf("\n");
+		}
+
+		if (makeOperation)
+		{
+			prev = nodeIndex;
+			nodeIndex = dev_tree[nodeIndex].parent;
+		}
+
+		
+	}
+	
+	for (int i = 0; i < 2 * sphere_count; i++)
+		if (sphereIntersections[i] > 0)
+		{
+			dev_intersection_result[x + y * width] = sphereIntersections[0];
+			return;
+		}
+			
+
+	dev_intersection_result[x + y * width] =1000;
 }
 
 
@@ -199,7 +383,7 @@ __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sp
 }
 
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
-	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
+	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts)
 {
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
@@ -213,13 +397,18 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	}
 	cudaDeviceSynchronize();
 
+	
+
 	dim3 grid2(width, height);
-	CalculateInterscetion << <grid2, block >> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result);
+	CalculateInterscetion << <grid2, 128 >> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
+
+	printf("CalculateInterscetion finished\n");
+
 
 
 	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result);

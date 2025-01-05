@@ -49,10 +49,10 @@ int main() {
 
 	Node nodeArr[2 * SPHERE_COUNT - 1];
 
-	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,0 };
-	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
+	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,2 };
+	nodeArr[1] = Node{ 2,9,0,0,0,0,0,2 };
 	nodeArr[2] = Node{ 3,4,1,0,0,0,0,2 };
-	nodeArr[3] = Node{ 6,5,2,0,0,0,0,2 };
+	nodeArr[3] = Node{ 5,6,2,0,0,0,0,2 };
 	nodeArr[4] = Node{ 8,7,2,0,0,0,0,2 };
 
 	nodeArr[5] = Node{ -1,-1,3, 1,0,0,1,0 };
@@ -62,7 +62,7 @@ int main() {
 	nodeArr[9] = Node{ -1,-1,1, 0,0,0,1.5,0 };
 	nodeArr[10] = Node{ -1,-1,0, 0.5,0,-1,0.5,0 };
 
-	
+	int parts[4*(SPHERE_COUNT-1)] = {0,9,10,11,0,7,8,9,0,3,4,7,0,1,2,3,4,5,6,7};
 
 	//copy sphere and texture to gpu
 	unsigned char* dev_texture_data;
@@ -71,12 +71,13 @@ int main() {
 	float* dev_camera_position;
 	float* dev_light_postion;
 	Node* dev_tree;
+	int* dev_parts;
 
 	float* dev_intersecion_points;
 	float* dev_intersection_result;
 
 	cudaError_t err;
-	err=cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
+	err = cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
@@ -100,18 +101,23 @@ int main() {
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
-	err = cudaMalloc(&dev_intersecion_points, TEXTURE_WIDHT * TEXTURE_HEIGHT * SPHERE_COUNT * 2 *  sizeof(float));
+	err = cudaMalloc(&dev_intersecion_points, TEXTURE_WIDHT * TEXTURE_HEIGHT * SPHERE_COUNT * 2 * sizeof(float));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
-	err = cudaMalloc(&dev_intersection_result, TEXTURE_WIDHT * TEXTURE_HEIGHT *  sizeof(float));
+	err = cudaMalloc(&dev_intersection_result, TEXTURE_WIDHT * TEXTURE_HEIGHT * sizeof(float));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
-	
+	err = cudaMalloc(&dev_parts, 4*(SPHERE_COUNT - 1) * sizeof(int));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+
 
 	cudaMemcpy(dev_tree, nodeArr, NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_parts, parts, 4*(SPHERE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
@@ -126,7 +132,8 @@ int main() {
 		scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
-		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion, SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result);
+		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion,
+			SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
 		//scene.UpdateTextureCpu(tree);
 
 		// copy texture to cpu
