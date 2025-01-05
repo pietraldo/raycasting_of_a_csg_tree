@@ -34,17 +34,14 @@ public:
 
 	float angle = 0;
 
-	vector<Sphere> spheres;
-
 	Scene();
 	void SetCamera(Camera camera);
-	void AddSphere(Sphere sphere);
 	void SetLight(Light light);
 
 	Camera& GetCamera() { return camera; }
 	Texture& GetTexture() { return texture; }
 	void UpdateTextureCpu();
-	void UpdateTextureGpu(unsigned char* dev_tecture_data, DevSphere* dev_spheres, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
+	void UpdateTextureGpu(unsigned char* dev_tecture_data, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
 };
 
 

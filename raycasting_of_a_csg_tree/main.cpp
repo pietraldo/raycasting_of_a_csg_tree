@@ -31,9 +31,6 @@ Scene scene;
 // Main function
 int main() {
 
-
-
-
 	Window window(SCR_WIDTH, SCR_HEIGHT);
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
@@ -41,64 +38,16 @@ int main() {
 	const int SPHERE_COUNT = 6;
 	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
 
-	Sphere spheres_scene[SPHERE_COUNT];
-
-	//const int sphere_render_radius = 10;
-	/*for (int i = 0; i < SPHERE_COUNT; i++) {
-		spheres_scene[i] = Sphere(vec3(rand() % sphere_render_radius - sphere_render_radius/2, rand() % sphere_render_radius - sphere_render_radius/2, rand() % sphere_render_radius - sphere_render_radius/2), 1.0f);
-	}*/
-	spheres_scene[0] = Sphere(vec3(1, 0, 0), 1.0f);
-	spheres_scene[1] = Sphere(vec3(-1, 0, 0), 1.0f);
-	spheres_scene[2] = Sphere(vec3(0, 1, 0), 1.0f);
-	spheres_scene[3] = Sphere(vec3(0, -1, 0), 1.0f);
-	spheres_scene[4] = Sphere(vec3(0, 0, 0), 1.5f);
-	spheres_scene[5] = Sphere(vec3(0.5, 0, -1), 0.5f);
-
 	scene = Scene();
 	scene.SetCamera(Camera(vec3(0, 0, -8)));
-	for (int i = 0; i < SPHERE_COUNT; i++)
-		scene.AddSphere(spheres_scene[i]);
 	scene.SetLight(Light(vec3(0, 0, -4), vec3(1, 1, 1)));
 
 	window.RegisterTexture(scene.GetTexture());
 
 
 
-	DevSphere spheres[SPHERE_COUNT];
-	for (int i = 0; i < SPHERE_COUNT; i++) {
-
-		spheres[i].position[0] = scene.spheres[i].position.x;
-		spheres[i].position[1] = scene.spheres[i].position.y;
-		spheres[i].position[2] = scene.spheres[i].position.z;
-
-		spheres[i].radius = scene.spheres[i].radius;
-
-		spheres[i].color[0] = scene.spheres[i].color.r;
-		spheres[i].color[1] = scene.spheres[i].color.g;
-		spheres[i].color[2] = scene.spheres[i].color.b;
-	}
-
 
 	Node nodeArr[2 * SPHERE_COUNT - 1];
-	for (int i = 0; i < SPHERE_COUNT; i++) {
-		nodeArr[i + SPHERE_COUNT - 1] = Node{ -1, -1, 0, spheres_scene[i].position.x, spheres_scene[i].position.y, spheres_scene[i].position.z, spheres_scene[i].radius, 0 };
-	}
-	/*int row = 0;
-	int col = 0;
-	for (int i = 0; i < SPHERE_COUNT - 1; i++)
-	{
-
-		nodeArr[i] = Node{i+ (int)pow(2,row)+col, i+(int)pow(2,row) + col+1, 0, 0, 0, 0, 2};
-		if (col == (int)pow(2, row)-1)
-		{
-			row++;
-			col = 0;
-		}
-		else
-		{
-			col++;
-		}
-	}*/
 
 	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,0 };
 	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
@@ -106,16 +55,16 @@ int main() {
 	nodeArr[3] = Node{ 6,5,2,0,0,0,0,2 };
 	nodeArr[4] = Node{ 8,7,2,0,0,0,0,2 };
 
-	nodeArr[5].parent = 3;
-	nodeArr[6].parent = 3;
-	nodeArr[7].parent = 4;
-	nodeArr[8].parent = 4;
-	nodeArr[9].parent = 1;
-	nodeArr[10].parent = 0;
+	nodeArr[5] = Node{ -1,-1,3, 1,0,0,1,0 };
+	nodeArr[6] = Node{ -1,-1,3, -1,0,0,1,0 };
+	nodeArr[7] = Node{ -1,-1,4, 0,1,0,1,0 };
+	nodeArr[8] = Node{ -1,-1,4, 0,-1,0,1,0 };
+	nodeArr[9] = Node{ -1,-1,1, 0,0,0,1.5,0 };
+	nodeArr[10] = Node{ -1,-1,0, 0.5,0,-1,0.5,0 };
 
+	
 
 	//copy sphere and texture to gpu
-	DevSphere* dev_spheres;
 	unsigned char* dev_texture_data;
 	float* dev_projection;
 	float* dev_view;
@@ -151,10 +100,6 @@ int main() {
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
-	err = cudaMalloc(&dev_spheres, SPHERE_COUNT * sizeof(DevSphere));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
 	err = cudaMalloc(&dev_intersecion_points, TEXTURE_WIDHT * TEXTURE_HEIGHT * SPHERE_COUNT * 2 *  sizeof(float));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
@@ -167,7 +112,6 @@ int main() {
 
 	cudaMemcpy(dev_tree, nodeArr, NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_spheres, spheres, SPHERE_COUNT * sizeof(DevSphere), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
@@ -182,7 +126,7 @@ int main() {
 		scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
-		scene.UpdateTextureGpu(dev_texture_data, dev_spheres, dev_projection, dev_view, dev_camera_position, dev_light_postion, SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result);
+		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion, SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result);
 		//scene.UpdateTextureCpu(tree);
 
 		// copy texture to cpu

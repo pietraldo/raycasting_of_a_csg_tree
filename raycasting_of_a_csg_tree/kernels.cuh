@@ -12,23 +12,22 @@
 __global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* results);
 
 __global__ void child();
-__global__ void RayWithSphereIntersectionPoints(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
-	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points);
+__global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sphere_count,
+	float* projection, float* view, float* camera_pos, Node* dev_tree, float* dev_intersecion_points);
 
 
-__global__ void CalculateInterscetion(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
+__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
+
+__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
 	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
 
-__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
-	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
 
-
-void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height, DevSphere* devSpheres,
+void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
 
 __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree);
 
-__host__ __device__ bool IntersectionPoint(DevSphere* sphere, float* rayOrigin, float* rayDirection, float& t1, float& t2);
+__host__ __device__ bool IntersectionPoint(float3 spherePosition, float radius, float* rayOrigin, float* rayDirection, float& t1, float& t2);
 
 __host__ __device__ float dot3(float* a, float* b);
 

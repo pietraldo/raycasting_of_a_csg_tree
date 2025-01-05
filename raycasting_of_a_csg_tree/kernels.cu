@@ -54,7 +54,7 @@ __host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int
 __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree)
 {
 
-	pixelPosition[0] += 0.001 * lightRay[0];
+	/*pixelPosition[0] += 0.001 * lightRay[0];
 	pixelPosition[1] += 0.001 * lightRay[1];
 	pixelPosition[2] += 0.001 * lightRay[2];
 	for (int k = 0; k < sphere_count; k++)
@@ -79,7 +79,7 @@ __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float*
 		{
 			return true;
 		}
-	}
+	}*/
 	return false;
 }
 
@@ -131,36 +131,33 @@ __global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* resul
 	}
 
 }
-__global__ void CalculateInterscetion(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
-	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
+__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
 {
-	int x = threadIdx.x + blockIdx.x * blockDim.x;
-	int y = threadIdx.y + blockIdx.y * blockDim.y;
+	int x = blockIdx.x;
+	int y = blockIdx.y;
 	if (x >= width || y >= height)
 		return;
 
+	if(threadIdx.x!=0)
+		return;
+
 	int iindex = (x + y * width) * sphere_count * 2;
+
+	float* sphereIntersections = dev_intersecion_points + iindex;
+
 	float min = 10000;
 	for (int i = 0; i < sphere_count; i++)
 	{
-		if (x == 400 && y == 300)
-		{
-			printf("t1: %f, t2: %f\n", dev_intersecion_points[iindex + 2 * i], dev_intersecion_points[iindex + 2 * i + 1]);
-		}
-		if (dev_intersecion_points[iindex + 2 * i] < min && dev_intersecion_points[iindex+2*i]>0)
-			min = dev_intersecion_points[iindex + 2 * i];
+		if (sphereIntersections[2 * i] < min && sphereIntersections[2 * i]>0)
+			min = sphereIntersections[2 * i];
 	}
-		
-	if (x == 400 && y == 300)
-	{
-		printf("min: %f\n", min);
-	}
+
 	dev_intersection_result[x + y * width] = min;
 }
 
 
-__global__ void RayWithSphereIntersectionPoints(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
-	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points)
+__global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sphere_count,
+	float* projection, float* view, float* camera_pos, Node* dev_tree, float* dev_intersecion_points)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -187,43 +184,45 @@ __global__ void RayWithSphereIntersectionPoints(unsigned char* dev_texture_data,
 	ray[2] = target[2];
 
 	int index = (x + y * width) * sphere_count * 2;
-	for (int k = 0; k < sphere_count; k++)
+	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
 	{
-		float t1=-1, t2=-1;
-		IntersectionPoint(&spheres[k], camera_pos, ray, t1, t2);
+		float t1 = -1, t2 = -1;
+
+		float3 spherePosition = make_float3(dev_tree[k].x, dev_tree[k].y, dev_tree[k].z);
+		float radius = dev_tree[k].radius;
+		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
 		dev_intersecion_points[index + 2 * k] = t1;
 		dev_intersecion_points[index + 2 * k + 1] = t2;
-		if (x == 400 && y == 300)
-		{
-			printf("t1: %f, t2: %f\n", t1, t2);
-		}
+
 	}
 }
 
-void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height, DevSphere* devSpheres,
+void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
 {
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-	
 
-	RayWithSphereIntersectionPoints << <grid, block >> > (dev_texture_data, width, height, devSpheres, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points);
+
+	RayWithSphereIntersectionPoints << <grid, block >> > (width, height, sphere_count, projection, view, camera_pos, dev_tree, dev_intersecion_points);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("RayWithSphereIntersectionPoints launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
 
-	CalculateInterscetion << <grid, block >> > (dev_texture_data, width, height, devSpheres, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result);
+	dim3 grid2(width, height);
+	CalculateInterscetion << <grid2, block >> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
 
-	ColorPixel << <grid, block >> > (dev_texture_data, width, height, devSpheres, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result);
+
+	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
@@ -232,39 +231,37 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height, DevSphe
 
 }
 
-__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, DevSphere* spheres, size_t sphere_count,
+__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
 	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
 
+
 	if (x >= width || y >= height)
 		return;
 
 	float colorf = dev_intersection_result[x + y * width];
-	if (x == 400 && y == 300)
-	{
-		printf("colorf: %f\n", colorf);
-	}
-	
-	unsigned char color = (colorf < 100 & colorf>0) ? 255 : 0;
-	color = color - (int)(colorf*100);
 
-	
+	unsigned char color = (colorf < 100 & colorf>0) ? 255 : 0;
+	color = color - (int)(colorf * 100);
+
+
 
 	int index = 3 * (y * width + x);
+
 	dev_texture_data[index] = color;
 	dev_texture_data[index + 1] = color;
 	dev_texture_data[index + 2] = color;
 }
 
 
-__host__ __device__ bool IntersectionPoint(DevSphere* sphere, float* rayOrigin, float* rayDirection, float& t1, float& t2)
+__host__ __device__ bool IntersectionPoint(float3 spherePosition, float radius, float* rayOrigin, float* rayDirection, float& t1, float& t2)
 {
 	float a = dot3(rayDirection, rayDirection);
-	float rayMinusSphere[3] = { rayOrigin[0] - sphere->position[0], rayOrigin[1] - sphere->position[1], rayOrigin[2] - sphere->position[2] };
+	float rayMinusSphere[3] = { rayOrigin[0] - spherePosition.x, rayOrigin[1] - spherePosition.y, rayOrigin[2] - spherePosition.z };
 	float b = 2 * dot3(rayDirection, rayMinusSphere);
-	float c = dot3(rayMinusSphere, rayMinusSphere) - sphere->radius * sphere->radius;
+	float c = dot3(rayMinusSphere, rayMinusSphere) - radius * radius;
 
 	float discriminant = b * b - 4 * a * c;
 	if (discriminant < 0)
