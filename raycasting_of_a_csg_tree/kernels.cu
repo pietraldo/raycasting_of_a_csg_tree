@@ -246,8 +246,11 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	{
 		printf("colorf: %f\n", colorf);
 	}
-
+	
 	unsigned char color = (colorf < 100 & colorf>0) ? 255 : 0;
+	color = color - (int)(colorf*100);
+
+	
 
 	int index = 3 * (y * width + x);
 	dev_texture_data[index] = color;
