@@ -28,6 +28,41 @@ float GetTimePassed(float& last);
 #include "kernels.cuh"
 
 Scene scene;
+
+void CreateParts(int* part,Node* tree, int node, bool isLeft, const int SphereCount)
+{
+	int ll, lr, rl, rr;
+	if (tree[tree[node].left].left == -1) // is leaf
+	{
+		ll = (tree[node].left - SphereCount+1)*2;
+		lr = (tree[node].left - SphereCount+1)*2+1;
+	}
+	else
+	{
+		CreateParts(part, tree, tree[node].left, true, SphereCount);
+		ll = part[tree[node].left * 4];
+		lr = part[tree[node].left * 4 + 3];
+	}
+	if (tree[tree[node].right].left == -1) // is leaf
+	{
+		rl = (tree[node].right - SphereCount + 1) * 2;
+		rr = (tree[node].right - SphereCount + 1) * 2 + 1;
+	}
+	else
+	{
+		CreateParts(part, tree, tree[node].right, false, SphereCount);
+		rl = part[tree[node].right * 4];
+		rr = part[tree[node].right * 4 + 3];
+	}
+	
+
+
+	part[node * 4] = ll;
+	part[node * 4 + 1] = lr;
+	part[node * 4 + 2] = rl;
+	part[node * 4 + 3] = rr;
+}
+
 // Main function
 int main() {
 
@@ -53,16 +88,19 @@ int main() {
 	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
 	nodeArr[2] = Node{ 3,4,1,0,0,0,0,2 };
 	nodeArr[3] = Node{ 5,6,2,0,0,0,0,2 };
-	nodeArr[4] = Node{ 8,7,2,0,0,0,0,2 };
+	nodeArr[4] = Node{ 7,8,2,0,0,0,0,2 };
 
 	nodeArr[5] = Node{ -1,-1,3, 1,0,0,1,0 };
 	nodeArr[6] = Node{ -1,-1,3, -1,0,0,1,0 };
 	nodeArr[7] = Node{ -1,-1,4, 0,1,0,1,0 };
 	nodeArr[8] = Node{ -1,-1,4, 0,-1,0,1,0 };
 	nodeArr[9] = Node{ -1,-1,1, 0,0,0,1.5,0 };
-	nodeArr[10] = Node{ -1,-1,0, 0.5,0,-1,0.5,0 };
+	nodeArr[10] = Node{ -1,-1,0, 0,0,0,0.5,0 };
 
-	int parts[4*(SPHERE_COUNT-1)] = {0,9,10,11,0,7,8,9,0,3,4,7,0,1,2,3,4,5,6,7};
+	int parts[4 * (SPHERE_COUNT - 1)];
+	/*= { 0,9,10,11,0,7,8,9,0,3,4,7,0,1,2,3,4,5,6,7 };*/
+
+	CreateParts(parts, nodeArr, 0, true, SPHERE_COUNT);
 
 	//copy sphere and texture to gpu
 	unsigned char* dev_texture_data;
