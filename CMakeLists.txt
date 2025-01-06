@@ -1,7 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.25)
 
 project(raycasting_of_a_csg_tree LANGUAGES CUDA CXX C)
-set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 
 add_subdirectory(raycasting_of_a_csg_tree)
 add_subdirectory(externals/glfw)
