@@ -49,8 +49,8 @@ int main() {
 
 	Node nodeArr[2 * SPHERE_COUNT - 1];
 
-	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,0 };
-	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
+	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,2 };
+	nodeArr[1] = Node{ 2,9,0,0,0,0,0,2 };
 	nodeArr[2] = Node{ 3,4,1,0,0,0,0,2 };
 	nodeArr[3] = Node{ 5,6,2,0,0,0,0,2 };
 	nodeArr[4] = Node{ 8,7,2,0,0,0,0,2 };
