@@ -13,7 +13,7 @@ public:
 	vec3 direction;
 	vec3 up = vec3(0, 1, 0);
 
-	float yaw = 90;
+	float yaw = 1;
 	float pitch = 0;
 	float fov = 45;
 

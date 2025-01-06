@@ -174,7 +174,10 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 	__syncthreads();
 	
-	
+	if (blockIdx.x == 400 && blockIdx.y == 300 && sphereIndex==5)
+	{
+		printf("sphere inter %f\n", t1);
+	}
 
 
 	int prev = nodeIndex;
@@ -194,27 +197,107 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 		if (makeOperation)
 		{
 			
-			if (dev_tree[nodeIndex].operation == 0) 
+			if (dev_tree[nodeIndex].operation == 0)
 			{
-				// TODO: make substraction
+				int p1 = parts[4 * nodeIndex];
+				int k1 = parts[4 * nodeIndex + 1];
+				int p2 = parts[4 * nodeIndex + 2];
+				int k2 = parts[4 * nodeIndex + 3];
+
+				int list1Index = p1;
+				int list2Index = p2;
+				int addIndex = p1;
+
+				while (list1Index <= k1)
+				{
+					float start1 = sphereIntersections[list1Index];
+					float end1 = sphereIntersections[list1Index + 1];
+
+					while (list2Index <= k2 && sphereIntersections[list2Index] <= end1)
+					{
+						float start2 = sphereIntersections[list2Index];
+						float end2 = sphereIntersections[list2Index + 1];
+
+						if (end2 < start1)
+						{
+							list2Index += 2;
+							continue;
+						}
+
+						if (start2 > end1)
+							break;
+
+						if (start1 < start2)
+						{
+							sphereIntersections[addIndex] = start1;
+							sphereIntersections[addIndex + 1] = start2;
+							addIndex += 2;
+						}
+
+						start1 = (end2 < end1) ? end2 : end1;
+						list2Index += 2;
+					}
+
+					if (start1 < end1)
+					{
+						sphereIntersections[addIndex] = start1;
+						sphereIntersections[addIndex + 1] = end1;
+						addIndex += 2;
+					}
+
+					list1Index += 2;
+				}
+
+				for (int i = addIndex; i <= k1; i++)
+				{
+					sphereIntersections[i] = 0;
+				}
 			}
+
 			else if (dev_tree[nodeIndex].operation == 1)
 			{
-				// TODO: make intersection
+				int p1 = parts[4 * nodeIndex];
+				int k1 = parts[4 * nodeIndex + 1];
+				int p2 = parts[4 * nodeIndex + 2];
+				int k2 = parts[4 * nodeIndex + 3];
+
+				int list1Index = p1;
+				int list2Index = p2;
+				int addIndex = p1;
+
+				while (list1Index <= k1 && list2Index <= k2)
+				{
+					float start1 = sphereIntersections[list1Index];
+					float end1 = sphereIntersections[list1Index + 1];
+					float start2 = sphereIntersections[list2Index];
+					float end2 = sphereIntersections[list2Index + 1];
+
+					float intersectionStart = start1 > start2 ? start1 : start2;
+					float intersectionEnd = end1 < end2 ? end1 : end2;
+
+					if (intersectionStart < intersectionEnd)
+					{
+						sphereIntersections[addIndex] = intersectionStart;
+						sphereIntersections[addIndex + 1] = intersectionEnd;
+						addIndex += 2;
+					}
+
+					if (end1 < end2)
+						list1Index += 2;
+					else
+						list2Index += 2;
+				}
+
+				for (int i = addIndex; i <= k1; i++)
+				{
+					sphereIntersections[i] = 0;
+				}
 			}
+
 			else
 			{
 				
-			/*	if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
-				{
-					printf("x: %d, y: %d\n", x, y);
-					for (int k = 0; k < 2 * sphere_count; k++)
-						printf("%.2f ", sphereIntersections[k]);
-					printf("\n");
-				}*/
-				if (blockIdx.x == 400 && blockIdx.y == 300)
-					printf("nodeIndex: %d\n", nodeIndex);
-				
+			
 
 				// TODO: make union
 				//punkty znajduja sie w lewym od indeksu a do b, w prawym od c do d
@@ -222,8 +305,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 				int k1 = parts[4 * nodeIndex + 1];
 				int p2 = parts[4 * nodeIndex + 2];
 				int k2 = parts[4 * nodeIndex + 3];
-				/*if (blockIdx.x == 400 && blockIdx.y == 300)
-					printf("p1: %d, k1: %d, p2: %d, k2: %d\n", p1, k1, p2, k2);*/
+				
 				
 				// sort by start time
 				int list1Index = p1;
@@ -259,12 +341,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 					}
 				}
 
-				/*if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
-				{
-					for (int k = 0; k < 2 * sphere_count; k++)
-						printf("%.2f ", tempArray[k]);
-					printf("\n");
-				}*/
+				
 
 
 				float start = tempArray[p1];
@@ -298,26 +375,22 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 					sphereIntersections[i] = 0;
 				}
 
-				if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
-				{
-					/*for (int k = 0; k < 2 * sphere_count; k++)
-						printf("%.2f ", sphereIntersections[k]);
-					printf("\n");*/
-					printf("\n");
-				}
+				
 
 			}
 			isReady[nodeIndex] = true;
+
+			if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
+			{
+				printf("nodeIndex: %d\n", nodeIndex);
+				for (int k = 0; k < 2 * sphere_count; k++)
+					printf("%.2f ", sphereIntersections[k]);
+				printf("\n");
+			}
 		}
 		__syncthreads();
 
-		if (blockIdx.x == 400 && blockIdx.y == 300 && threadIdx.x == 0)
-		{
-			for (int k = 0; k < 2 * sphere_count; k++)
-				printf("%.2f ", sphereIntersections[k]);
-			printf("\n");
-			printf("\n");
-		}
+	
 
 		if (makeOperation)
 		{
@@ -329,14 +402,14 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	}
 	
 	for (int i = 0; i < 2 * sphere_count; i++)
-		if (sphereIntersections[i] > 0)
+		if (sphereIntersections[i] > 0 && sphereIntersections[i]!=sphereIntersections[i+1])
 		{
 			dev_intersection_result[x + y * width] = sphereIntersections[i];
 			return;
 		}
 			
 
-	dev_intersection_result[x + y * width] =1000;
+	dev_intersection_result[x + y * width] = 255;
 }
 
 
@@ -376,8 +449,9 @@ __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sp
 		float radius = dev_tree[k].radius;
 		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
-		dev_intersecion_points[index + 2 * k] = t1;
-		dev_intersecion_points[index + 2 * k + 1] = t2;
+		int m = k - sphere_count + 1;
+		dev_intersecion_points[index + 2 * m] = t1;
+		dev_intersecion_points[index + 2 * m + 1] = t2;
 
 	}
 }
@@ -400,7 +474,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	
 
 	dim3 grid2(width, height);
-	CalculateInterscetion << <grid2, 128 >> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
+	CalculateInterscetion << <grid2, 512 >> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
@@ -430,22 +504,31 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	if (x >= width || y >= height)
 		return;
 
-	float colorf = (15-dev_intersection_result[x + y * width])/15.0f*255;
+	float colorf = (15-(dev_intersection_result[x + y * width]))/15.0f*255;
 
-	if (x == 400 && y == 300)
-		printf("colorf: %f\n", colorf);
 
 	unsigned char color = (colorf < 100 & colorf>0) ? 255 : 0;
 	
 	color = (int)colorf;
 
-
+	if (x == 400 && y == 300)
+	{
+		printf("dist: %f\n", dev_intersection_result[x + y * width]);
+	}
 
 	int index = 3 * (y * width + x);
 
 	dev_texture_data[index] = color;
 	dev_texture_data[index + 1] = color;
 	dev_texture_data[index + 2] = color;
+
+	if (x == 400 && y == 300)
+	{
+		dev_texture_data[index] = 255;
+		dev_texture_data[index + 1] = 0;
+		dev_texture_data[index + 2] = 0;
+
+	}
 }
 
 
