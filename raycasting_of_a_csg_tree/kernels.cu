@@ -131,6 +131,8 @@ __global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* resul
 	}
 
 }
+
+
 __global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points,
 	float* dev_intersection_result, int* parts)
 {
@@ -158,6 +160,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	__syncthreads();
 
 
+	
 
 
 	int sphereIndex = threadIdx.x;
@@ -174,20 +177,26 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 	__syncthreads();
 
+	/*if (blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x==0)
+	{
+		for (int i = 0; i < 2 * sphere_count; i++)
+		printf("%d ", isReady[i]);
+	}*/
+
 	/*if (blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0)
 	{
 		printf("nodeIndex: %d\n", nodeIndex);
 		for (int k = 0; k < 2 * sphere_count; k++)
 			printf("%.2f ", sphereIntersections[k]);
 		printf("\n");
-	}*/
-
+	}
+*/
 
 	int prev = nodeIndex;
 	nodeIndex = dev_tree[nodeIndex].parent;
 
 
-
+	
 
 	while (nodeIndex != -1)
 	{
@@ -200,14 +209,11 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 		}*/
 		if (dev_tree[nodeIndex].right == prev) return;
 
-		/*if (blockIdx.x == 0 && blockIdx.y == 0)
-		{
-			printf("nodeIDx: %d\n", nodeIndex);
-		}*/
-
 		bool makeOperation = isReady[dev_tree[nodeIndex].right];
 		if (makeOperation)
 		{
+			//if (blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0)
+				//printf("operaiotn\n");
 
 			if (dev_tree[nodeIndex].operation == 0)
 			{
@@ -521,7 +527,8 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 			nodeIndex = dev_tree[nodeIndex].parent;
 		}
 
-
+		/*if (blockIdx.x == 0 && blockIdx.y == 0 && threadIdx.x == 0)
+				printf("operaiotn\n");*/
 	}
 
 
@@ -579,7 +586,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-
+	//printf("RayWithSphereIntersectionPoints started\n");
 
 	RayWithSphereIntersectionPoints << <grid, block >> > (width, height, sphere_count, projection, view, camera_pos, dev_tree, dev_intersecion_points);
 	cudaError_t err = cudaGetLastError();
@@ -588,7 +595,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	}
 	cudaDeviceSynchronize();
 
-	/*printf("RayWithSphereIntersectionPoints finished\n");*/
+	//printf("RayWithSphereIntersectionPoints finished\n");
 
 	dim3 grid2(width, height);
 	CalculateInterscetion << <grid2, 512 >> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
@@ -598,7 +605,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	}
 	cudaDeviceSynchronize();
 
-	/*printf("CalculateInterscetion finished\n");*/
+	//printf("CalculateInterscetion finished\n");
 
 
 
