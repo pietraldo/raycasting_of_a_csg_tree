@@ -338,32 +338,74 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 				int list2Index = p2;
 				int addIndex = p1;
 
-				while (list1Index <= k1 && list2Index <= k2)
+				while (list1Index < k1 && list2Index < k2)
 				{
+					if (sphereIntersections[list1Index] == -1 || sphereIntersections[list2Index] == -1) // one of the lists just ended
+					{
+						break;
+					}
+
 					float start1 = sphereIntersections[list1Index];
 					float end1 = sphereIntersections[list1Index + 1];
 					float start2 = sphereIntersections[list2Index];
 					float end2 = sphereIntersections[list2Index + 1];
 
-					float intersectionStart = start1 > start2 ? start1 : start2;
-					float intersectionEnd = end1 < end2 ? end1 : end2;
-
-					if (intersectionStart < intersectionEnd)
+					if (start1 < start2)
 					{
-						sphereIntersections[addIndex] = intersectionStart;
-						sphereIntersections[addIndex + 1] = intersectionEnd;
-						addIndex += 2;
+						if (end1 < start2)
+						{
+							list1Index += 2;
+						}
+						else
+						{
+
+							if (end1 < end2)
+							{
+								tempArray[addIndex] = start2;
+								tempArray[addIndex + 1] = end1;
+								addIndex += 2;
+								list1Index += 2;
+							}
+							else
+							{
+								tempArray[addIndex] = start2;
+								tempArray[addIndex + 1] = end2;
+								addIndex += 2;
+								list2Index += 2;
+							}
+						}
 					}
-
-					if (end1 < end2)
-						list1Index += 2;
 					else
-						list2Index += 2;
+					{
+						if (end2 < start1)
+						{
+							list2Index += 2;
+						}
+						else
+						{
+							if (end2 < end1)
+							{
+								tempArray[addIndex] = start1;
+								tempArray[addIndex + 1] = end2;
+								addIndex += 2;
+								list2Index += 2;
+							}
+							else
+							{
+								tempArray[addIndex] = start1;
+								tempArray[addIndex + 1] = end1;
+								addIndex += 2;
+								list1Index += 2;
+							}
+						}
+					}
 				}
-
-				for (int i = addIndex; i <= k1; i++)
+				for (int i = p1; i <= k1; i++)
 				{
-					sphereIntersections[i] = 0;
+					if (i < addIndex)
+						sphereIntersections[i] = tempArray[i];
+					else
+						sphereIntersections[i] = -1;
 				}
 			}
 
