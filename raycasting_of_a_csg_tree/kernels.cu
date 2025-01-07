@@ -139,7 +139,7 @@ __global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* resul
 
 
 __global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points,
-	float* dev_intersection_result, int* parts)
+	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -148,23 +148,47 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	if (x >= width || y >= height)
 		return;
 
-	const int sphereCount = 128; // TODO: change to sphere_count
+	float t1 = -1, t2 = -1;
+	const int sphereCount = 256; // TODO: change to sphere_count
 	float sphereIntersections[2 * sphereCount]; // 2 floats for each sphere
 	float tempArray[2 * sphereCount]; // 2 floats for each sphere
 
+	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
 
-	float* dev_sphereIntersections = dev_intersecion_points + (x + y * width) * sphere_count * 2;
-	for (int i = 0; i < sphere_count; i++)
+	float stepX = 2 / (float)width;
+	float stepY = 2 / (float)height;
+
+	float3 ray = make_float3(-1 + x * stepX, -1 + y * stepY, 1.0f);
+	float4 target = make_float4(ray.x, ray.y, ray.z, 1.0f);
+
+	MultiplyVectorByMatrix4(target, projection);
+	target.x /= target.w;
+	target.y /= target.w;
+	target.z /= target.w;
+	target.w /= target.w;
+
+	target = NormalizeVector4(target);
+	target.w = 0.0f;
+
+	MultiplyVectorByMatrix4(target, view);
+
+	ray.x = target.x;
+	ray.y = target.y;
+	ray.z = target.z;
+
+	int index = (x + y * width) * sphere_count * 2;
+	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
 	{
+		float t1 = -1, t2 = -1;
 
-		float t1 = dev_sphereIntersections[2 * i];
-		float t2 = dev_sphereIntersections[2 * i + 1];
+		float3 spherePosition = make_float3(dev_tree[k].x, dev_tree[k].y, dev_tree[k].z);
+		float radius = dev_tree[k].radius;
+		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
-		sphereIntersections[2 * i] = t1;
-		sphereIntersections[2 * i + 1] = t2;
+		int m = k - sphere_count + 1;
+		sphereIntersections[2 * m] = t1;
+		sphereIntersections[2 * m + 1] = t2;
 	}
-
-
 
 	for (int i = sphere_count - 2; i >= 0; i--)
 	{
@@ -470,6 +494,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sphere_count,
 	float* projection, float* view, float* camera_pos_ptr, Node* dev_tree, float* dev_intersecion_points)
 {
+	return;
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -522,34 +547,49 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
 	//printf("RayWithSphereIntersectionPoints started\n");
-
+	auto start = std::chrono::high_resolution_clock::now();
 	RayWithSphereIntersectionPoints << <grid, block >> > (width, height, sphere_count, projection, view, camera_pos, dev_tree, dev_intersecion_points);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("RayWithSphereIntersectionPoints launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
+	auto end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = end - start;
+
+	//printf("RayWithSphereIntersectionPoints time: %f\n", elapsed.count());
+
 
 	//printf("RayWithSphereIntersectionPoints finished\n");
 
+	auto start2 = std::chrono::high_resolution_clock::now();
 	dim3 grid2(width, height);
-	CalculateInterscetion << <grid, block>> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
+	CalculateInterscetion << <grid, block>> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, camera_pos, projection, view);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
+	auto end2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed2 = end2 - start2;
 
-	//printf("CalculateInterscetion finished\n");
+	//printf("CalculateInterscetion time: %f\n", elapsed2.count());
 
 
 
+	auto start3 = std::chrono::high_resolution_clock::now();
 	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
+	auto end3 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed3 = end3 - start3;
+
+	//printf("ColorPixel time: %f\n", elapsed3.count());
+
+	printf("%f %f %f\n", elapsed.count(), elapsed2.count(), elapsed3.count());
 
 }
 
