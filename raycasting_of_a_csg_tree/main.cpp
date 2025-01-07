@@ -70,7 +70,7 @@ int main() {
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
-	const int SPHERE_COUNT = 6;
+	const int SPHERE_COUNT = 128;
 	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
 
 	scene = Scene();
@@ -80,7 +80,7 @@ int main() {
 	window.RegisterTexture(scene.GetTexture());
 
 
-	/*Node nodeArr[2 * SPHERE_COUNT - 1];
+	Node nodeArr[2 * SPHERE_COUNT - 1];
 
 	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++)
 	{
@@ -103,9 +103,9 @@ int main() {
 	
 
 	int parts[4 * (SPHERE_COUNT - 1)];
-	CreateParts(parts, nodeArr, 0, true, SPHERE_COUNT);*/
+	CreateParts(parts, nodeArr, 0, true, SPHERE_COUNT);
 
-	Node nodeArr[2 * SPHERE_COUNT - 1];
+	/*Node nodeArr[2 * SPHERE_COUNT - 1];
 
 	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,0 };
 	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
@@ -120,7 +120,7 @@ int main() {
 	nodeArr[9] = Node{ -1,-1,1, 0,0,0,1.5,0 };
 	nodeArr[10] = Node{ -1,-1,0, 1,1,0,0.5,0 };
 
-	int parts[4 * (SPHERE_COUNT - 1)] = { 0,9,10,11,0,7,8,9,0,3,4,7,0,1,2,3,4,5,6,7 };
+	int parts[4 * (SPHERE_COUNT - 1)] = { 0,9,10,11,0,7,8,9,0,3,4,7,0,1,2,3,4,5,6,7 };*/
 
 	//copy sphere and texture to gpu
 	unsigned char* dev_texture_data;
