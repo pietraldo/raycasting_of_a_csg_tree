@@ -160,7 +160,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	__syncthreads();
 
 
-	
+
 
 
 	int sphereIndex = threadIdx.x;
@@ -196,7 +196,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	nodeIndex = dev_tree[nodeIndex].parent;
 
 
-	
+
 
 	while (nodeIndex != -1)
 	{
@@ -306,15 +306,15 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 				}
 
 
-				
 
-				if (list2Index > k2 || sphereIntersections[list2Index]==-1)
+
+				if (list2Index > k2 || sphereIntersections[list2Index] == -1)
 				{
 					tempArray[addIndex] = start1;
 					tempArray[addIndex + 1] = end1;
 					addIndex += 2;
 					list1Index += 2;
-					while (list1Index <= k1 && sphereIntersections[list1Index]!=- 1)
+					while (list1Index <= k1 && sphereIntersections[list1Index] != -1)
 					{
 						tempArray[addIndex] = sphereIntersections[list1Index];
 						tempArray[addIndex + 1] = sphereIntersections[list1Index + 1];
@@ -322,7 +322,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 						list1Index += 2;
 					}
 				}
-				
+
 				for (int i = p1; i <= k1; i++)
 				{
 					if (i < addIndex)
@@ -466,7 +466,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 					tempIndex += 2;
 				}
 
-			
+
 
 				// merging tempArray into sphereIntersections
 				if (tempIndex != p1) //if something changed
@@ -514,11 +514,11 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 			}*/
 		}
 
-		
+
 
 		__syncthreads();
 
-		
+
 
 
 		if (makeOperation)
@@ -619,7 +619,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 }
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
-	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
+	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -628,31 +628,106 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	if (x >= width || y >= height)
 		return;
 
-	float colorf = (15 - (dev_intersection_result[x + y * width])) / 15.0f * 255;
+	float t = dev_intersection_result[x + y * width];
 
+	float stepX = 2 / (float)width;
+	float stepY = 2 / (float)height;
 
-	unsigned char color = (colorf < 100 & colorf>0) ? 255 : 0;
+	float ray[3] = { -1 + x * stepX, -1 + y * stepY, 1.0f };
+	float target[4] = { ray[0], ray[1], ray[2], 1.0f };
 
-	color = (int)colorf;
+	MultiplyVectorByMatrix4(target, projection);
+	for (int i = 0; i < 4; i++)
+		target[i] /= target[3];
+	NormalizeVector4(target);
+	target[3] = 0.0f;
 
-	//if (x == 400 && y == 300)
-	//{
-	//	printf("dist: %f\n", dev_intersection_result[x + y * width]);
-	//}
+	MultiplyVectorByMatrix4(target, view);
 
-	int index = 3 * (y * width + x);
+	ray[0] = target[0];
+	ray[1] = target[1];
+	ray[2] = target[2];
 
-	dev_texture_data[index] = color;
-	dev_texture_data[index + 1] = color;
-	dev_texture_data[index + 2] = color;
-
-	if (x == 400 && y == 300)
+	float color[3] = { 0.0f, 0.0f, 0.0f };
+	int index = (x + y * width) * sphere_count * 2;
+	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
 	{
-		dev_texture_data[index] = 255;
-		dev_texture_data[index + 1] = 0;
-		dev_texture_data[index + 2] = 0;
+		float t1 = -1, t2 = -1;
+
+		float3 spherePosition = make_float3(dev_tree[k].x, dev_tree[k].y, dev_tree[k].z);
+		float radius = dev_tree[k].radius;
+		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
+
+		float3 pixelPosition = make_float3(camera_pos[0] + t * ray[0], camera_pos[1] + t * ray[1], camera_pos[2] + t * ray[2]);
+		if (t1 == t)
+		{
+			float lightRay[3] = { light_pos[0] - pixelPosition.x, light_pos[1] - pixelPosition.y, light_pos[2] - pixelPosition.z };
+			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
+			NormalizeVector3(lightRay);
+
+			float pixelPosition1_a[3];
+			for (int i = 0; i < 3; i++)
+				pixelPosition1_a[i] = camera_pos[i] + (t1)*ray[i];
+			
+			float ka = 0.2; // Ambient reflection coefficient
+			float kd = 0.5; // Diffuse reflection coefficient
+			float ks = 0.4; // Specular reflection coefficient
+			float shininess = 10; // Shininess factor
+			float ia = 0.6; // Ambient light intensity
+			float id = 0.5; // Diffuse light intensity
+			float is = 0.5; // Specular light intensity
+
+			float L[3] = { light_pos[0] - pixelPosition.x, light_pos[1] - pixelPosition.y, light_pos[2] - pixelPosition.z };
+			NormalizeVector3(L);
+			float N[3] = { pixelPosition.x - spherePosition.x, pixelPosition.y - spherePosition.y, pixelPosition.z - spherePosition.z };
+			NormalizeVector3(N);
+			float V[3] = { -ray[0], -ray[1], -ray[2] };
+			NormalizeVector3(V);
+			float R[3] = { 2.0f * dot3(L, N) * N[0] - L[0], 2.0f * dot3(L, N) * N[1] - L[1], 2.0f * dot3(L, N) * N[2] - L[2] };
+			NormalizeVector3(R);
+
+			// Ambient contribution
+			float ambient = ka * ia;
+
+			// Diffuse contribution (only if dot(N, L) > 0)
+			float diffuse = kd * id * dot3(N, L);
+			if (diffuse < 0.0f) {
+				diffuse = 0.0f;
+			}
+
+
+			// Specular contribution (only if dot(R, V) > 0)
+			float specular = 0.0f;
+			float dotRV = dot3(R, V);
+			if (dotRV > 0.0f) {
+				specular = ks * is * pow(dotRV, shininess);
+			}
+
+
+			float col = ambient + diffuse + specular;
+
+			if (col < 0)
+				col = 0;
+			if (col > 1)
+				col = 1;
+
+
+			color[0] = 255 * col;
+			color[1] = 255 * col;
+			color[2] = 255 * col;
+		}
+		else
+		{
+
+		}
 
 	}
+
+
+	int index2 = 3 * (y * width + x);
+	dev_texture_data[index2] = color[0];
+	dev_texture_data[index2 + 1] = color[1];
+	dev_texture_data[index2 + 2] = color[2];
 }
 
 

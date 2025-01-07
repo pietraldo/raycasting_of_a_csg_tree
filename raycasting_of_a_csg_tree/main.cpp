@@ -70,7 +70,7 @@ int main() {
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
-	const int SPHERE_COUNT = 128;
+	const int SPHERE_COUNT = 16;
 	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
 
 	scene = Scene();
@@ -99,7 +99,7 @@ int main() {
 		nodeArr[i] = Node{left, right, parent, 0,0,0,0,2};
 	}
 	nodeArr[0].parent = -1;
-	nodeArr[0].operation = 0;
+	nodeArr[0].operation = 2;
 	/*nodeArr[0] = Node{ 1,10,-1,0,0,0,0,0 };
 	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
 	nodeArr[2] = Node{ 3,4,1,0,0,0,0,2 };
@@ -179,9 +179,9 @@ int main() {
 		window.ProccessInput(scene, dt);
 
 		float r = 100000.0f;
-		//scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
+		scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
 		//scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
-		scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
+		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
 		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion,
