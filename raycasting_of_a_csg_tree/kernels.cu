@@ -640,6 +640,15 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float t = dev_intersection_result[x + y * width];
 
+	if (t==1000)
+	{
+		int index2 = 3 * (y * width + x);
+		dev_texture_data[index2] = 0;
+		dev_texture_data[index2 + 1] = 0;
+		dev_texture_data[index2 + 2] = 0;
+		return;
+	}
+
 	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
 	float3 light_pos = make_float3(light_pos_ptr[0], light_pos_ptr[1], light_pos_ptr[2]);
 
@@ -665,6 +674,10 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	ray.z = target.z;
 
 	float color[3] = { 0.0f, 0.0f, 0.0f };
+	float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
+	float3 N;
+
+	bool intersection = false;
 	int index = (x + y * width) * sphere_count * 2;
 	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
 	{
@@ -674,75 +687,74 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 		float radius = dev_tree[k].radius;
 		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
-		float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
-		if (t1 == t)
+		
+		if (t1 == t )
 		{
-			float3 lightRay = make_float3( light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z );
-			float lightDistance = sqrt(lightRay.x * lightRay.x + lightRay.y * lightRay.y + lightRay.z * lightRay.z);
-			lightRay=NormalizeVector3(lightRay);
-
-			
-			float ka = 0.2; // Ambient reflection coefficient
-			float kd = 0.5; // Diffuse reflection coefficient
-			float ks = 0.4; // Specular reflection coefficient
-			float shininess = 10; // Shininess factor
-			float ia = 0.6; // Ambient light intensity
-			float id = 0.5; // Diffuse light intensity
-			float is = 0.5; // Specular light intensity
-
-			float3 L = make_float3( light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z );
-			L=NormalizeVector3(L);
-			float3 N = make_float3( pixelPosition.x - spherePosition.x, pixelPosition.y - spherePosition.y, pixelPosition.z - spherePosition.z );
-			N=NormalizeVector3(N);
-			float3 V = make_float3( - ray.x, -ray.y, -ray.z );
-			V=NormalizeVector3(V);
-			float3 R = make_float3( 2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z- L.z );
-			R=NormalizeVector3(R);
-
-			// Ambient contribution
-			float ambient = ka * ia;
-
-			// Diffuse contribution (only if dot(N, L) > 0)
-			float diffuse = kd * id * dot3(N, L);
-			if (diffuse < 0.0f) {
-				diffuse = 0.0f;
-			}
-
-
-			// Specular contribution (only if dot(R, V) > 0)
-			float specular = 0.0f;
-			float dotRV = dot3(R, V);
-			if (dotRV > 0.0f) {
-				specular = ks * is * pow(dotRV, shininess);
-			}
-
-
-			float col = ambient + diffuse + specular;
-
-			if (col < 0)
-				col = 0;
-			if (col > 1)
-				col = 1;
-
-
-			color[0] = 255 * col;
-			color[1] = 255 * col;
-			color[2] = 255 * col;
+			intersection = true;
+			N = NormalizeVector3(make_float3(pixelPosition.x - spherePosition.x, pixelPosition.y - spherePosition.y, pixelPosition.z - spherePosition.z));
+			break;
 		}
-		else
+		if (t2 == t)
 		{
-
+			intersection = true;
+			N = NormalizeVector3(make_float3(-pixelPosition.x + spherePosition.x,- pixelPosition.y + spherePosition.y, -pixelPosition.z + spherePosition.z));
+			break;
 		}
 
 	}
 
+	if (!intersection) return;
+
+	float3 lightRay = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
+	float3 L = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
+	float3 V = NormalizeVector3(make_float3(-ray.x, -ray.y, -ray.z));
+	float3 R = NormalizeVector3(make_float3(2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z - L.z));
+
+
+	float3 color1 = CalculateColor(N, L, V, R);
+
 
 	int index2 = 3 * (y * width + x);
-	dev_texture_data[index2] = color[0];
-	dev_texture_data[index2 + 1] = color[1];
-	dev_texture_data[index2 + 2] = color[2];
+	dev_texture_data[index2] = (int)color1.x;
+	dev_texture_data[index2 + 1] = (int)color1.y;
+	dev_texture_data[index2 + 2] = (int)color1.z;
 }
 
+__device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R)
+{
+	float ka = 0.2; // Ambient reflection coefficient
+	float kd = 0.5; // Diffuse reflection coefficient
+	float ks = 0.4; // Specular reflection coefficient
+	float shininess = 10; // Shininess factor
+	float ia = 0.6; // Ambient light intensity
+	float id = 0.5; // Diffuse light intensity
+	float is = 0.5; // Specular light intensity
+
+	// Ambient contribution
+	float ambient = ka * ia;
+
+	// Diffuse contribution (only if dot(N, L) > 0)
+	float diffuse = kd * id * dot3(N, L);
+	if (diffuse < 0.0f) {
+		diffuse = 0.0f;
+	}
+
+	// Specular contribution (only if dot(R, V) > 0)
+	float specular = 0.0f;
+	float dotRV = dot3(R, V);
+	if (dotRV > 0.0f) {
+		specular = ks * is * pow(dotRV, shininess);
+	}
+
+	float col = ambient + diffuse + specular;
+
+	if (col < 0)
+		col = 0;
+	if (col > 1)
+		col = 1;
+
+	return make_float3(255 * col, 255 * col, 255 * col);
+}
 
 __host__ __device__ bool IntersectionPoint(
 	const float3& spherePosition,

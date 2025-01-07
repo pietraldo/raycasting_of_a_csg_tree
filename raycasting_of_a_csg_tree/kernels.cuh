@@ -27,6 +27,8 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 
 __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree);
 
+__device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R);
+
 __host__ __device__ bool IntersectionPoint(const float3& spherePosition,float radius,const float3& rayOrigin,const float3& rayDirection,float& t1, float& t2);
 
 __host__ __device__ float dot3(const float3& a, const float3& b);
