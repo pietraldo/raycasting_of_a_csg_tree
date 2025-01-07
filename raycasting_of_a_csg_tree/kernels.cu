@@ -1,34 +1,39 @@
 #include "kernels.cuh"
 
-__host__ __device__ void MultiplyVectorByMatrix4(float* vector, float* matrix)
+__host__ __device__ void MultiplyVectorByMatrix4(float4& vector, const float* matrix)
 {
-	float result[4] = { 0 };
-	for (int i = 0; i < 4; i++) {
-		result[i] = 0;
-		for (int j = 0; j < 4; j++) {
-			result[i] += vector[j] * matrix[i * 4 + j];
-		}
-	}
-	for (int i = 0; i < 4; i++) {
-		vector[i] = result[i];
-	}
+	float4 result = { 0, 0, 0, 0 };
+	result.x = vector.x * matrix[0] + vector.y * matrix[1] + vector.z * matrix[2] + vector.w * matrix[3];
+	result.y = vector.x * matrix[4] + vector.y * matrix[5] + vector.z * matrix[6] + vector.w * matrix[7];
+	result.z = vector.x * matrix[8] + vector.y * matrix[9] + vector.z * matrix[10] + vector.w * matrix[11];
+	result.w = vector.x * matrix[12] + vector.y * matrix[13] + vector.z * matrix[14] + vector.w * matrix[15];
+
+	vector = result;
 }
 
-__host__ __device__ void NormalizeVector4(float* vector)
+__host__ __device__ float4 NormalizeVector4(float4 vector)
 {
-	float length = sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2] + vector[3] * vector[3]);
-	vector[0] /= length;
-	vector[1] /= length;
-	vector[2] /= length;
-	vector[3] /= length;
+	float length = sqrt(vector.x * vector.x +
+		vector.y * vector.y +
+		vector.z * vector.z +
+		vector.w * vector.w);
+
+	vector.x /= length;
+	vector.y /= length;
+	vector.z /= length;
+	vector.w /= length;
+
+	return vector;
 }
 
-__host__ __device__ void NormalizeVector3(float* vector)
+
+__host__ __device__ float3 NormalizeVector3(float3 vector)
 {
-	float length = sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
-	vector[0] /= length;
-	vector[1] /= length;
-	vector[2] /= length;
+	float length = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+	vector.x /= length;
+	vector.y /= length;
+	vector.z /= length;
+	return vector;
 }
 
 __host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int nodeIndex)
@@ -538,7 +543,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 
 __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sphere_count,
-	float* projection, float* view, float* camera_pos, Node* dev_tree, float* dev_intersecion_points)
+	float* projection, float* view, float* camera_pos_ptr, Node* dev_tree, float* dev_intersecion_points)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -546,23 +551,28 @@ __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sp
 	if (x >= width || y >= height)
 		return;
 
+	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
+
 	float stepX = 2 / (float)width;
 	float stepY = 2 / (float)height;
 
-	float ray[3] = { -1 + x * stepX, -1 + y * stepY, 1.0f };
-	float target[4] = { ray[0], ray[1], ray[2], 1.0f };
+	float3 ray = make_float3(-1 + x * stepX, -1 + y * stepY, 1.0f);
+	float4 target = make_float4(ray.x, ray.y, ray.z, 1.0f);
 
 	MultiplyVectorByMatrix4(target, projection);
-	for (int i = 0; i < 4; i++)
-		target[i] /= target[3];
-	NormalizeVector4(target);
-	target[3] = 0.0f;
+	target.x /= target.w;
+	target.y /= target.w;
+	target.z /= target.w;
+	target.w /= target.w;
+
+	target=NormalizeVector4(target);
+	target.w = 0.0f;
 
 	MultiplyVectorByMatrix4(target, view);
 
-	ray[0] = target[0];
-	ray[1] = target[1];
-	ray[2] = target[2];
+	ray.x = target.x;
+	ray.y = target.y;
+	ray.z = target.z;
 
 	int index = (x + y * width) * sphere_count * 2;
 	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
@@ -608,7 +618,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	//printf("CalculateInterscetion finished\n");
 
 
-
+	
 	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
@@ -619,7 +629,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 }
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
-	float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
+	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -630,23 +640,29 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float t = dev_intersection_result[x + y * width];
 
+	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
+	float3 light_pos = make_float3(light_pos_ptr[0], light_pos_ptr[1], light_pos_ptr[2]);
+
 	float stepX = 2 / (float)width;
 	float stepY = 2 / (float)height;
 
-	float ray[3] = { -1 + x * stepX, -1 + y * stepY, 1.0f };
-	float target[4] = { ray[0], ray[1], ray[2], 1.0f };
+	float3 ray = make_float3( - 1 + x * stepX, -1 + y * stepY, 1.0f);
+	float4 target = make_float4( ray.x, ray.y, ray.z, 1.0f );
 
 	MultiplyVectorByMatrix4(target, projection);
-	for (int i = 0; i < 4; i++)
-		target[i] /= target[3];
-	NormalizeVector4(target);
-	target[3] = 0.0f;
+	target.x /= target.w;
+	target.y /= target.w;
+	target.z /= target.w;
+	target.w /= target.w;
+
+	target=NormalizeVector4(target);
+	target.w = 0.0f;
 
 	MultiplyVectorByMatrix4(target, view);
 
-	ray[0] = target[0];
-	ray[1] = target[1];
-	ray[2] = target[2];
+	ray.x = target.x;
+	ray.y = target.y;
+	ray.z = target.z;
 
 	float color[3] = { 0.0f, 0.0f, 0.0f };
 	int index = (x + y * width) * sphere_count * 2;
@@ -658,16 +674,13 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 		float radius = dev_tree[k].radius;
 		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
-		float3 pixelPosition = make_float3(camera_pos[0] + t * ray[0], camera_pos[1] + t * ray[1], camera_pos[2] + t * ray[2]);
+		float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
 		if (t1 == t)
 		{
-			float lightRay[3] = { light_pos[0] - pixelPosition.x, light_pos[1] - pixelPosition.y, light_pos[2] - pixelPosition.z };
-			float lightDistance = sqrt(lightRay[0] * lightRay[0] + lightRay[1] * lightRay[1] + lightRay[2] * lightRay[2]);
-			NormalizeVector3(lightRay);
+			float3 lightRay = make_float3( light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z );
+			float lightDistance = sqrt(lightRay.x * lightRay.x + lightRay.y * lightRay.y + lightRay.z * lightRay.z);
+			lightRay=NormalizeVector3(lightRay);
 
-			float pixelPosition1_a[3];
-			for (int i = 0; i < 3; i++)
-				pixelPosition1_a[i] = camera_pos[i] + (t1)*ray[i];
 			
 			float ka = 0.2; // Ambient reflection coefficient
 			float kd = 0.5; // Diffuse reflection coefficient
@@ -677,14 +690,14 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 			float id = 0.5; // Diffuse light intensity
 			float is = 0.5; // Specular light intensity
 
-			float L[3] = { light_pos[0] - pixelPosition.x, light_pos[1] - pixelPosition.y, light_pos[2] - pixelPosition.z };
-			NormalizeVector3(L);
-			float N[3] = { pixelPosition.x - spherePosition.x, pixelPosition.y - spherePosition.y, pixelPosition.z - spherePosition.z };
-			NormalizeVector3(N);
-			float V[3] = { -ray[0], -ray[1], -ray[2] };
-			NormalizeVector3(V);
-			float R[3] = { 2.0f * dot3(L, N) * N[0] - L[0], 2.0f * dot3(L, N) * N[1] - L[1], 2.0f * dot3(L, N) * N[2] - L[2] };
-			NormalizeVector3(R);
+			float3 L = make_float3( light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z );
+			L=NormalizeVector3(L);
+			float3 N = make_float3( pixelPosition.x - spherePosition.x, pixelPosition.y - spherePosition.y, pixelPosition.z - spherePosition.z );
+			N=NormalizeVector3(N);
+			float3 V = make_float3( - ray.x, -ray.y, -ray.z );
+			V=NormalizeVector3(V);
+			float3 R = make_float3( 2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z- L.z );
+			R=NormalizeVector3(R);
 
 			// Ambient contribution
 			float ambient = ka * ia;
@@ -731,27 +744,44 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 }
 
 
-__host__ __device__ bool IntersectionPoint(float3 spherePosition, float radius, float* rayOrigin, float* rayDirection, float& t1, float& t2)
+__host__ __device__ bool IntersectionPoint(
+	const float3& spherePosition,
+	float radius,
+	const float3& rayOrigin,
+	const float3& rayDirection,
+	float& t1,
+	float& t2)
 {
+	// Calculate coefficients for the quadratic equation
 	float a = dot3(rayDirection, rayDirection);
-	float rayMinusSphere[3] = { rayOrigin[0] - spherePosition.x, rayOrigin[1] - spherePosition.y, rayOrigin[2] - spherePosition.z };
-	float b = 2 * dot3(rayDirection, rayMinusSphere);
+	float3 rayMinusSphere = make_float3(
+		rayOrigin.x - spherePosition.x,
+		rayOrigin.y - spherePosition.y,
+		rayOrigin.z - spherePosition.z
+	);
+	float b = 2.0f * dot3(rayDirection, rayMinusSphere);
 	float c = dot3(rayMinusSphere, rayMinusSphere) - radius * radius;
 
+	// Calculate discriminant
 	float discriminant = b * b - 4 * a * c;
-	if (discriminant < 0)
+	if (discriminant < 0.0f)
 	{
-		return false;
+		return false; // No intersection
 	}
-	t1 = (-b - sqrt(discriminant)) / (2 * a);
-	t2 = (-b + sqrt(discriminant)) / (2 * a);
-	return true;
+
+	// Calculate t1 and t2 (solutions to the quadratic equation)
+	float sqrtDiscriminant = sqrt(discriminant);
+	t1 = (-b - sqrtDiscriminant) / (2.0f * a);
+	t2 = (-b + sqrtDiscriminant) / (2.0f * a);
+
+	return true; // Intersection found
 }
 
-__host__ __device__ float dot3(float* a, float* b)
+__host__ __device__ float dot3(const float3& a, const float3& b)
 {
-	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
+
 
 __host__ __device__ bool SphereSubstraction(bool a, bool b)
 {

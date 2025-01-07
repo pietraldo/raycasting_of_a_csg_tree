@@ -27,15 +27,15 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 
 __device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree);
 
-__host__ __device__ bool IntersectionPoint(float3 spherePosition, float radius, float* rayOrigin, float* rayDirection, float& t1, float& t2);
+__host__ __device__ bool IntersectionPoint(const float3& spherePosition,float radius,const float3& rayOrigin,const float3& rayDirection,float& t1, float& t2);
 
-__host__ __device__ float dot3(float* a, float* b);
+__host__ __device__ float dot3(const float3& a, const float3& b);
 
-__host__ __device__ void MultiplyVectorByMatrix4(float* vector, float* matrix);
+__host__ __device__ void MultiplyVectorByMatrix4(float4& vector, const float* matrix);
 
-__host__ __device__ void NormalizeVector4(float* vector);
+__host__ __device__ float4 NormalizeVector4(float4 vector);
 
-__host__ __device__ void NormalizeVector3(float* vector);
+__host__ __device__ float3 NormalizeVector3(float3 vector);
 
 __host__ __device__ bool SphereSubstraction(bool a, bool b);
 
