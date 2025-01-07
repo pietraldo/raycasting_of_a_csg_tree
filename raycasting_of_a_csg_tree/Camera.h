@@ -20,6 +20,7 @@ public:
 	float r = 10;
 
 	bool rotateScene = true;
+	bool setCameraToCenter = false;
 
 	float speed = 10.0f;
 

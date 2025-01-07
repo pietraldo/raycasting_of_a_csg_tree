@@ -48,10 +48,6 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	if (x >= width || y >= height)
 		return;
 	
-	if (x == 400 && y == 300)
-	{
-		printf("dev spheres: %f\n", dev_tree[255].parent);
-	}
 
 	float t1 = -1, t2 = -1;
 	const int sphereCount = 256; // TODO: change to sphere_count

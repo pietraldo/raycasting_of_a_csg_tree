@@ -22,9 +22,18 @@ void Camera::UpdatePosition()
 
 		position = camPos;
 		direction = -position;
+		setCameraToCenter = true;
 	}
 	else
 	{
+		if (setCameraToCenter)
+		{
+			position = vec3(-11, -4, 0);
+			pitch = 2;
+			yaw = 22;
+			setCameraToCenter = false;
+		}
+
 		direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
 		direction.y = sin(glm::radians(pitch));
 		direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
