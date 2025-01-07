@@ -176,6 +176,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	ray.y = target.y;
 	ray.z = target.z;
 
+	unsigned int start = clock();
 	int index = (x + y * width) * sphere_count * 2;
 	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
 	{
@@ -189,7 +190,13 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 		sphereIntersections[2 * m] = t1;
 		sphereIntersections[2 * m + 1] = t2;
 	}
+	if (x == 400 && y == 300)
+	{
+		unsigned int end = clock();
+		printf("CalculateInterscetion1 time: %f\n", (end - start) / 1000.0f);
+	}
 
+	unsigned int start2 = clock();
 	for (int i = sphere_count - 2; i >= 0; i--)
 	{
 		int nodeIndex = i;
@@ -485,6 +492,12 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 	}
 
+	if (x == 400 && y == 300)
+	{
+		unsigned int end2 = clock();
+		printf("CalculateInterscetion2 time: %f\n", (end2 - start2) / 1000.0f);
+	}
+
 
 	dev_intersection_result[x + y * width] = sphereIntersections[0] > 0 ? sphereIntersections[0] : 1000;
 
@@ -546,26 +559,11 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-	//printf("RayWithSphereIntersectionPoints started\n");
-	auto start = std::chrono::high_resolution_clock::now();
-	RayWithSphereIntersectionPoints << <grid, block >> > (width, height, sphere_count, projection, view, camera_pos, dev_tree, dev_intersecion_points);
-	cudaError_t err = cudaGetLastError();
-	if (err != cudaSuccess) {
-		printf("RayWithSphereIntersectionPoints launch error: %s\n", cudaGetErrorString(err));
-	}
-	cudaDeviceSynchronize();
-	auto end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed = end - start;
-
-	//printf("RayWithSphereIntersectionPoints time: %f\n", elapsed.count());
-
-
-	//printf("RayWithSphereIntersectionPoints finished\n");
-
+	
 	auto start2 = std::chrono::high_resolution_clock::now();
 	dim3 grid2(width, height);
 	CalculateInterscetion << <grid, block>> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, camera_pos, projection, view);
-	err = cudaGetLastError();
+	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
@@ -589,7 +587,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 
 	//printf("ColorPixel time: %f\n", elapsed3.count());
 
-	printf("%f %f %f\n", elapsed.count(), elapsed2.count(), elapsed3.count());
+	//printf("%f %f \n", elapsed2.count(), elapsed3.count());
 
 }
 

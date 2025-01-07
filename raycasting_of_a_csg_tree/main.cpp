@@ -185,8 +185,8 @@ int main() {
 		window.ProccessInput(scene, dt);
 
 		float r = 100000.0f;
-		scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
-		//scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
+		//scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
+		scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
 		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
