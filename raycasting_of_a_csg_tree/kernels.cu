@@ -36,110 +36,10 @@ __host__ __device__ float3 NormalizeVector3(float3 vector)
 	return vector;
 }
 
-__host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int nodeIndex)
-{
-
-	if (tree[nodeIndex].left == -1 && tree[nodeIndex].right == -1)
-	{
-		return SphereContains(tree[nodeIndex].x, tree[nodeIndex].y, tree[nodeIndex].z, tree[nodeIndex].radius, x, y, z);
-	}
-	else
-	{
-		bool left = TreeContains(tree, x, y, z, tree[nodeIndex].left);
-		bool right = TreeContains(tree, x, y, z, tree[nodeIndex].right);
-		if (tree[nodeIndex].operation == 0)
-			return SphereSubstraction(left, right);
-		else if (tree[nodeIndex].operation == 1)
-			return SphereIntersection(left, right);
-		else
-			return SphereUnion(left, right);
-		//return tree[nodeIndex].functionPtr(left, right);
-	}
-}
-__device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree)
-{
-
-	/*pixelPosition[0] += 0.001 * lightRay[0];
-	pixelPosition[1] += 0.001 * lightRay[1];
-	pixelPosition[2] += 0.001 * lightRay[2];
-	for (int k = 0; k < sphere_count; k++)
-	{
-		float t1, t2;
-		if (!IntersectionPoint(&spheres[k], pixelPosition, lightRay, t1, t2)) continue;
-
-		float intersection1[3];
-		for (int i = 0; i < 3; i++)
-			intersection1[i] = pixelPosition[i] + (t1 + 0.001) * lightRay[i];
-
-		if (t1 > 0 && TreeContains(dev_tree, intersection1[0], intersection1[1], intersection1[2], 0))
-		{
-			return true;
-		}
-
-		float intersection2[3];
-		for (int i = 0; i < 3; i++)
-			intersection2[i] = pixelPosition[i] + (t2 - 0.001) * lightRay[i];
-
-		if (t2 > 0 && TreeContains(dev_tree, intersection2[0], intersection2[1], intersection2[2], 0))
-		{
-			return true;
-		}
-	}*/
-	return false;
-}
-
-__global__ void child()
-{
-	int i = threadIdx.x;
-	//printf("Hello from child\n");
-}
-
-__global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* result)
-{
-	__shared__ bool results[128];
-	//printf("Hello from GoTree\n");
-	int index = threadIdx.x + sphere_count - 1;
-	if (index >= 2 * sphere_count - 1)
-		return;
-
-
-	// first is a leaf
-	results[index] = SphereContains(arr[index].x, arr[index].y, arr[index].z, arr[index].radius, point.x, point.y, point.z);
-	__syncthreads();
-	//printf("index %d:  %d\n", index, results[index]);
-
-	int prev = index;
-	index = arr[index].parent;
-
-	while (index != -1)
-	{
-
-		if (arr[index].right == prev) return;
-
-		if (arr[index].operation == 0)
-			results[index] = SphereSubstraction(results[arr[index].right], results[arr[index].left]);
-		else if (arr[index].operation == 1)
-			results[index] = SphereIntersection(results[arr[index].right], results[arr[index].left]);
-		else
-			results[index] = SphereUnion(results[arr[index].right], results[arr[index].left]);
-		__syncthreads();
-		//printf("index %d:  %d\n", index, results[index]);
-
-		if (index == 0)
-		{
-			/**result = results[index];*/
-			return;
-		}
-
-		prev = index;
-		index = arr[index].parent;
-	}
-
-}
 
 
 __global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points,
-	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view)
+	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view, Sphere* dev_spheres)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -147,6 +47,11 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 	if (x >= width || y >= height)
 		return;
+	
+	if (x == 400 && y == 300)
+	{
+		printf("dev spheres: %f\n", dev_tree[255].parent);
+	}
 
 	float t1 = -1, t2 = -1;
 	const int sphereCount = 256; // TODO: change to sphere_count
@@ -182,8 +87,8 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	{
 		float t1 = -1, t2 = -1;
 
-		float3 spherePosition = make_float3(dev_tree[k].x, dev_tree[k].y, dev_tree[k].z);
-		float radius = dev_tree[k].radius;
+		float3 spherePosition = make_float3(dev_tree[k].sphere->position.x, dev_tree[k].sphere->position.y, dev_tree[k].sphere->position.z);
+		float radius = dev_tree[k].sphere->radius;
 		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
 		int m = k - sphere_count + 1;
@@ -508,7 +413,7 @@ __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sp
 	float* projection, float* view, float* camera_pos_ptr, Node* dev_tree, float* dev_intersecion_points)
 {
 	return;
-	int x = threadIdx.x + blockIdx.x * blockDim.x;
+	/*int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
 
 	if (x >= width || y >= height)
@@ -550,11 +455,11 @@ __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sp
 		dev_intersecion_points[index + 2 * m] = t1;
 		dev_intersecion_points[index + 2 * m + 1] = t2;
 
-	}
+	}*/
 }
 
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
-	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts)
+	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres)
 {
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
@@ -562,7 +467,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	
 	auto start2 = std::chrono::high_resolution_clock::now();
 	dim3 grid2(width, height);
-	CalculateInterscetion << <grid, block>> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, camera_pos, projection, view);
+	CalculateInterscetion << <grid, block>> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, camera_pos, projection, view, dev_spheres);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
@@ -576,7 +481,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 
 
 	auto start3 = std::chrono::high_resolution_clock::now();
-	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result);
+	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result, dev_spheres);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
@@ -592,7 +497,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 }
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
-	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result)
+	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, Sphere* dev_spheres)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -646,8 +551,8 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	{
 		float t1 = -1, t2 = -1;
 
-		float3 spherePosition = make_float3(dev_tree[k].x, dev_tree[k].y, dev_tree[k].z);
-		float radius = dev_tree[k].radius;
+		float3 spherePosition = make_float3(dev_tree[k].sphere->position.x, dev_tree[k].sphere->position.y, dev_tree[k].sphere->position.z);
+		float radius = dev_tree[k].sphere->radius;
 		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
 

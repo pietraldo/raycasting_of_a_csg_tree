@@ -28,7 +28,7 @@ void Texture::SetPixel(int x, int y, glm::vec3 color)
 }
 
 void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count,
-	Node* dev_tree, float* dev_intersecion_points,float* dev_intersection_result, int* dev_parts)
+	Node* dev_tree, float* dev_intersecion_points,float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres)
 {
 
 	// Matrix that transforms from camera space to screen space
@@ -57,6 +57,6 @@ void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, float* dev_project
 	cudaMemcpy(dev_camera_position, camera_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_light_position, light_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
 
-	UpdateOnGPU(dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, sphere_count, dev_projection, dev_view, dev_camera_position, dev_light_position, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
+	UpdateOnGPU(dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, sphere_count, dev_projection, dev_view, dev_camera_position, dev_light_position, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres);
 }
 

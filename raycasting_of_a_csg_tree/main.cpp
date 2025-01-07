@@ -82,25 +82,32 @@ int main() {
 
 	Node nodeArr[2 * SPHERE_COUNT - 1];
 
+	Sphere spheres[SPHERE_COUNT];
+	for (int i = 0; i < SPHERE_COUNT; i++)
+	{
+		float x = rand() / (float)RAND_MAX * 4;
+		float y = rand() / (float)RAND_MAX * 4;
+		float z = rand() / (float)RAND_MAX * 4;
+		float r = 0.5f;
+		spheres[i] = Sphere{ r, make_float3(x,y,z), make_int3(255,255,255) };
+	}
+
+
 	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++)
 	{
-		float x = rand()/(float)RAND_MAX*4;
-		float y = rand()/(float)RAND_MAX*4;
-		float z = rand()/(float)RAND_MAX*4;
-		float r = 0.5f;
 		int parent = (i - 1) / 2;
-		nodeArr[i] = Node{ -1,-1,parent,x,y,z,r,0};
+		nodeArr[i] = Node{ -1,-1,parent,nullptr,0 };
 	}
 	for (int i = 0; i < SPHERE_COUNT - 1; i++)
 	{
 		int left = 2 * i + 1;
 		int right = 2 * i + 2;
 		int parent = (i - 1) / 2;
-		nodeArr[i] = Node{left, right, parent, 0,0,0,0,2};
+		nodeArr[i] = Node{ left, right, parent, nullptr,2 };
 	}
 	nodeArr[0].parent = -1;
 	nodeArr[0].operation = 2;
-	
+
 
 	int parts[4 * (SPHERE_COUNT - 1)];
 	CreateParts(parts, nodeArr, 0, true, SPHERE_COUNT);
@@ -130,11 +137,24 @@ int main() {
 	float* dev_light_postion;
 	Node* dev_tree;
 	int* dev_parts;
+	Sphere* dev_spheres;
 
 	float* dev_intersecion_points;
 	float* dev_intersection_result;
 
+
+
 	cudaError_t err;
+
+	err = cudaMalloc(&dev_spheres, SPHERE_COUNT * sizeof(Sphere));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_spheres error: %s\n", cudaGetErrorString(err));
+	}
+
+	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++) {
+		nodeArr[i].sphere = &dev_spheres[i - (SPHERE_COUNT - 1)];
+	}
+
 	err = cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
@@ -176,6 +196,7 @@ int main() {
 	cudaMemcpy(dev_tree, nodeArr, NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_parts, parts, 4*(SPHERE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_spheres, spheres, SPHERE_COUNT * sizeof(Sphere), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
@@ -191,7 +212,7 @@ int main() {
 
 
 		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion,
-			SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts);
+			SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres);
 		//scene.UpdateTextureCpu(tree);
 
 		// copy texture to cpu

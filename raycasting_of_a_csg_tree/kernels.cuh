@@ -10,23 +10,23 @@
 //__global__ void UpdatePixel(unsigned char* dev_texture_data);
 //void UpdateTextureOnGPU(unsigned char* dev_texture_data);
 
-__global__ void GoTree(Node* arr, float3 point, size_t sphere_count, bool* results);
 
-__global__ void child();
+
+
 __global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sphere_count,
 	float* projection, float* view, float* camera_pos, Node* dev_tree, float* dev_intersecion_points);
 
 
-__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view);
+__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result,
+	int* parts, float* camera_pos_ptr, float* projection, float* view, Sphere* dev_spheres);
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
-	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result);
+	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, Sphere* dev_spheres);
 
 
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
-	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts);
+	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres);
 
-__device__ bool BlockingLightRay(DevSphere* spheres, size_t sphere_count, float* pixelPosition, float* lightRay, Node* dev_tree);
 
 __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R);
 
@@ -48,7 +48,7 @@ __host__ __device__ bool SphereUnion(bool a, bool b);
 
 __host__ __device__ bool SphereContains(float sx, float sy, float sz, float sr, float x, float y, float z);
 
-__host__ __device__ bool TreeContains(Node* tree, float x, float y, float z, int nodeIndex);
+
 
 //__global__ void UpdatePixel(unsigned char* dev_texture_data, float width, float height, mat4 projection, mat4 view, Sphere* spheres,
 //	size_t sphere_count, vec3 camera_pos, vec3 light_pos);
