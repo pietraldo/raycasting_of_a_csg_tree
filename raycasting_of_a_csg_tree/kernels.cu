@@ -543,6 +543,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	bool intersection = false;
 	int index = (x + y * width) * sphere_count * 2;
+	int sphereIndex = 0;
 	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
 	{
 		float t1 = -1, t2 = -1;
@@ -551,7 +552,10 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 		float radius = dev_tree[k].sphere->radius;
 		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
 
-
+		if (t1 == t || t2 == t)
+		{
+			sphereIndex = k-(sphere_count-1);
+		}
 		if (t1 == t)
 		{
 			intersection = true;
@@ -575,7 +579,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	float3 R = NormalizeVector3(make_float3(2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z - L.z));
 
 
-	float3 color1 = CalculateColor(N, L, V, R);
+	float3 color1 = CalculateColor(N, L, V, R, dev_spheres[sphereIndex].color);
 
 
 	int index2 = 3 * (y * width + x);
@@ -584,11 +588,11 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	dev_texture_data[index2 + 2] = (int)color1.z;
 }
 
-__device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R)
+__device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R, const int3& color)
 {
-	float ka = 0.2; // Ambient reflection coefficient
-	float kd = 0.5; // Diffuse reflection coefficient
-	float ks = 0.4; // Specular reflection coefficient
+	float ka = 0.9; // Ambient reflection coefficient
+	float kd = 0.4; // Diffuse reflection coefficient
+	float ks = 0.2; // Specular reflection coefficient
 	float shininess = 10; // Shininess factor
 	float ia = 0.6; // Ambient light intensity
 	float id = 0.5; // Diffuse light intensity
@@ -617,7 +621,7 @@ __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  floa
 	if (col > 1)
 		col = 1;
 
-	return make_float3(255 * col, 255 * col, 255 * col);
+	return make_float3(color.x * col, color.y* col, color.z * col);
 }
 
 __host__ __device__ bool IntersectionPoint(

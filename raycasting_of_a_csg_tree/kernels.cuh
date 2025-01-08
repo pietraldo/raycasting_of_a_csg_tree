@@ -28,7 +28,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres);
 
 
-__device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R);
+__device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R,const int3& color);
 
 __host__ __device__ bool IntersectionPoint(const float3& spherePosition,float radius,const float3& rayOrigin,const float3& rayDirection,float& t1, float& t2);
 

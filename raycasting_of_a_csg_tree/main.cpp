@@ -88,8 +88,11 @@ int main() {
 		float x = rand() / (float)RAND_MAX * 4;
 		float y = rand() / (float)RAND_MAX * 4;
 		float z = rand() / (float)RAND_MAX * 4;
-		float r = 0.5f;
-		spheres[i] = Sphere{ r, make_float3(x,y,z), make_int3(255,255,255) };
+		float radius = 0.5f;
+		int r = rand() / (float)RAND_MAX * 155+100;
+		int g = rand() / (float)RAND_MAX * 155+100;
+		int b = rand() / (float)RAND_MAX * 155+100;
+		spheres[i] = Sphere{ radius, make_float3(x,y,z), make_int3(r,g,b) };
 	}
 
 
@@ -106,7 +109,7 @@ int main() {
 		nodeArr[i] = Node{ left, right, parent, nullptr,2 };
 	}
 	nodeArr[0].parent = -1;
-	nodeArr[0].operation = 2;
+	nodeArr[0].operation = 1;
 
 
 	int parts[4 * (SPHERE_COUNT - 1)];
