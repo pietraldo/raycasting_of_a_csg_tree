@@ -116,8 +116,7 @@ bool TreeParser::Parse()
 
 	vector<string> indexes = vector<string>();
 	vector<string> leavesIndexes = vector<string>();
-	indexes.push_back(parse_nodes[root].indexStr);
-
+	
 	stack<string> stack;
 	stack.push(parse_nodes[root].indexStr);
 	
