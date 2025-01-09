@@ -70,7 +70,7 @@ int main() {
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
-	const int SPHERE_COUNT = 16;
+	const int SPHERE_COUNT = 2;
 	const int CUBES_COUNT = 1;
 	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
 
@@ -87,10 +87,10 @@ int main() {
 
 	for (int i = 0; i < SPHERE_COUNT; i++)
 	{
-		float x = rand() / (float)RAND_MAX * 4;
-		float y = rand() / (float)RAND_MAX * 4;
-		float z = rand() / (float)RAND_MAX * 4;
-		float radius = 0.5f;
+		float x = rand() / (float)RAND_MAX * 4-2;
+		float y = rand() / (float)RAND_MAX * 4-2;
+		float z = rand() / (float)RAND_MAX * 4-2;
+		float radius = 2.5f;
 		int r = rand() / (float)RAND_MAX * 155+100;
 		int g = rand() / (float)RAND_MAX * 155+100;
 		int b = rand() / (float)RAND_MAX * 155+100;
@@ -103,14 +103,14 @@ int main() {
 	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++)
 	{
 		int parent = (i - 1) / 2;
-		nodeArr[i] = Node{ -1,-1,parent,nullptr,0 };
+		nodeArr[i] = Node{ -1,-1,parent,1, nullptr,nullptr,0 };
 	}
 	for (int i = 0; i < SPHERE_COUNT - 1; i++)
 	{
 		int left = 2 * i + 1;
 		int right = 2 * i + 2;
 		int parent = (i - 1) / 2;
-		nodeArr[i] = Node{ left, right, parent, nullptr,2 };
+		nodeArr[i] = Node{ left, right, parent,1,nullptr, nullptr,2 };
 	}
 	nodeArr[0].parent = -1;
 	nodeArr[0].operation = 2;
@@ -167,6 +167,9 @@ int main() {
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_cubes error: %s\n", cudaGetErrorString(err));
 	}
+
+	nodeArr[SPHERE_COUNT-1].cube = dev_cubes;
+	nodeArr[SPHERE_COUNT-1].shape = 2;
 
 	err = cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
 	if (err != cudaSuccess) {
