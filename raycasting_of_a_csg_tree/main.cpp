@@ -70,7 +70,8 @@ int main() {
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
-	const int SPHERE_COUNT = 256;
+	const int SPHERE_COUNT = 16;
+	const int CUBES_COUNT = 1;
 	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
 
 	scene = Scene();
@@ -81,8 +82,9 @@ int main() {
 
 
 	Node nodeArr[2 * SPHERE_COUNT - 1];
-
+	Cube cubes[CUBES_COUNT];
 	Sphere spheres[SPHERE_COUNT];
+
 	for (int i = 0; i < SPHERE_COUNT; i++)
 	{
 		float x = rand() / (float)RAND_MAX * 4;
@@ -95,6 +97,8 @@ int main() {
 		spheres[i] = Sphere{ radius, make_float3(x,y,z), make_int3(r,g,b) };
 	}
 
+	cubes[0] = Cube{ make_float3(-1,-1,-1),make_float3(1,-1,-1),make_float3(1,1,-1),make_float3(-1,1,-1),
+			make_float3(-1,-1,1),make_float3(1,-1,1),make_float3(1,1,1),make_float3(-1,1,1) };
 
 	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++)
 	{
@@ -109,7 +113,7 @@ int main() {
 		nodeArr[i] = Node{ left, right, parent, nullptr,2 };
 	}
 	nodeArr[0].parent = -1;
-	nodeArr[0].operation = 1;
+	nodeArr[0].operation = 2;
 
 
 	int parts[4 * (SPHERE_COUNT - 1)];
@@ -141,6 +145,7 @@ int main() {
 	Node* dev_tree;
 	int* dev_parts;
 	Sphere* dev_spheres;
+	Cube* dev_cubes;
 
 	float* dev_intersecion_points;
 	float* dev_intersection_result;
@@ -156,6 +161,11 @@ int main() {
 
 	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++) {
 		nodeArr[i].sphere = &dev_spheres[i - (SPHERE_COUNT - 1)];
+	}
+
+	err = cudaMalloc(&dev_cubes, CUBES_COUNT * sizeof(Cube));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_cubes error: %s\n", cudaGetErrorString(err));
 	}
 
 	err = cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
@@ -200,6 +210,7 @@ int main() {
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_parts, parts, 4*(SPHERE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_spheres, spheres, SPHERE_COUNT * sizeof(Sphere), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_cubes, cubes, CUBES_COUNT * sizeof(Cube), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
@@ -215,7 +226,7 @@ int main() {
 
 
 		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion,
-			SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres);
+			SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres, dev_cubes);
 		//scene.UpdateTextureCpu(tree);
 
 		// copy texture to cpu

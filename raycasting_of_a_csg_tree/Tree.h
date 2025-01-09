@@ -1,5 +1,9 @@
 #pragma once
 
+struct Cube
+{
+	float3 vertices[8];
+};
 
 struct Sphere
 {
