@@ -36,7 +36,7 @@ __host__ __device__ float3 NormalizeVector3(float3 vector)
 	return vector;
 }
 
-__host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2)
+__host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
 {
 	float3 l = make_float3(cube.vertices[0].x, cube.vertices[0].y, cube.vertices[0].z);
 	float3 h = make_float3(cube.vertices[6].x, cube.vertices[6].y, cube.vertices[6].z);
@@ -67,9 +67,53 @@ __host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& r
 	t_close = tx_close > ty_close ? (tx_close > tz_close ? tx_close : tz_close) : (ty_close > tz_close ? ty_close : tz_close);
 	t_far = tx_far < ty_far ? (tx_far < tz_far ? tx_far : tz_far) : (ty_far < tz_far ? ty_far : tz_far);
 
+	if (t_close == tx_close)
+	{
+		if (r.x > 0)
+			N = make_float3(-1, 0, 0);
+		else
+			N = make_float3(1, 0, 0);
+	}
+	if (t_close == ty_close)
+	{
+		if (r.y > 0)
+			N = make_float3(0, -1, 0);
+		else
+			N = make_float3(0, 1, 0);
+	}
+	if (t_close == tz_close)
+	{
+		if (r.z > 0)
+			N = make_float3(0, 0, 1);
+		else
+			N = make_float3(0, 0, -1);
+	}
+
+	if (t_far == tx_far)
+	{
+		if (r.x > 0)
+			N2 = make_float3(-1, 0, 0);
+		else
+			N2 = make_float3(1, 0, 0);
+	}
+	if (t_far == ty_far)
+	{
+		if (r.y > 0)
+			N2 = make_float3(0, -1, 0);
+		else
+			N2 = make_float3(0, 1, 0);
+	}
+	if (t_far == tz_far)
+	{
+		if (r.z > 0)
+			N2 = make_float3(0, 0, -1);
+		else
+			N2 = make_float3(0, 0, 1);
+	}
+
 	t1 = t_close;
 	t2 = t_far;
-
+	
 	return t_close < t_far;
 }
 
@@ -125,16 +169,14 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 			float3 spherePosition = make_float3(dev_tree[k].sphere->position.x, dev_tree[k].sphere->position.y, dev_tree[k].sphere->position.z);
 			float radius = dev_tree[k].sphere->radius;
 			IntersectionPointSphere(spherePosition, radius, camera_pos, ray, t1, t2);
-			/*if (x == 0 && y == 0)
-			{
-				printf("dev_tree %f\n", dev_tree[k].sphere->radius);
-			}*/
+			
 		}
 		else if (dev_tree[k].shape==2)
 		{
 			
 			Cube* cube = dev_tree[k].cube;
-			if (!IntersectionPointCube(*cube, camera_pos, ray, t1, t2))
+			float3 N,N2;
+			if (!IntersectionPointCube(*cube, camera_pos, ray, t1, t2, N,N2))
 			{
 				t1 = -1;
 				t2 = -1;
@@ -588,8 +630,6 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	ray.z = target.z;
 
 	
-
-	float color[3] = { 0.0f, 0.0f, 0.0f };
 	float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
 	float3 N;
 
@@ -626,22 +666,22 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 		else if (dev_tree[k].shape == 2)
 		{
 			Cube* cube = dev_tree[k].cube;
-			IntersectionPointCube(*cube, camera_pos, ray, t1, t2);
+			float3 N2;
+			IntersectionPointCube(*cube, camera_pos, ray, t1, t2,N,N2);
 
 			if (t1 == t || t2 == t)
 			{
-				shapeColor = make_int3(255, 0, 0);
+				shapeColor = cube->color;
 			}
 			if (t1 == t)
-			{
+			{	
 				intersection = true;
-				N = make_float3(1, 0, 0);
 				break;
 			}
 			if (t2 == t)
 			{
 				intersection = true;
-				N = make_float3(1, 0, 0);
+				N = N2;
 				break;
 			}
 		}
@@ -669,7 +709,7 @@ __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  floa
 	float ka = 0.2; // Ambient reflection coefficient
 	float kd = 0.5; // Diffuse reflection coefficient
 	float ks = 0.4; // Specular reflection coefficient
-	float shininess = 10; // Shininess factor
+	float shininess = 100; // Shininess factor
 	float ia = 0.6; // Ambient light intensity
 	float id = 0.5; // Diffuse light intensity
 	float is = 0.5; // Specular light intensity

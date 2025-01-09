@@ -17,7 +17,7 @@ public:
 	float pitch = 0;
 	float fov = 45;
 
-	float r = 10;
+	float r = 20;
 
 	bool rotateScene = true;
 	bool setCameraToCenter = false;

@@ -33,7 +33,7 @@ __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  floa
 
 __host__ __device__ bool IntersectionPointSphere(const float3& spherePosition,float radius,const float3& rayOrigin,const float3& rayDirection,float& t1, float& t2);
 
-__host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin,const float3& rayDirection,float& t1, float& t2);
+__host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin,const float3& rayDirection,float& t1, float& t2, float3& N, float3& N2);
 
 __host__ __device__ float dot3(const float3& a, const float3& b);
 
