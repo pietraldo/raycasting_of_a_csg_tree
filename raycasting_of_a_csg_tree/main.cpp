@@ -30,7 +30,7 @@ float GetTimePassed(float& last);
 
 Scene scene;
 
-void CreateParts(int* part,Node* tree, int node, bool isLeft, const int SphereCount)
+void CreateParts(int* part,vector<Node>& tree, int node, bool isLeft, const int SphereCount)
 {
 	int ll, lr, rl, rr;
 	if (tree[tree[node].left].left == -1) // is leaf
@@ -67,16 +67,12 @@ void CreateParts(int* part,Node* tree, int node, bool isLeft, const int SphereCo
 // Main function
 int main() {
 
-	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
-	parser.Parse();
+	
 
 	Window window(SCR_WIDTH, SCR_HEIGHT);
 
 	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
-	const int SPHERE_COUNT = 2;
-	const int CUBES_COUNT = 1;
-	const int NODE_COUNT = 2 * SPHERE_COUNT - 1;
 
 	scene = Scene();
 	scene.SetCamera(Camera(vec3(0, 0, -8)));
@@ -85,60 +81,24 @@ int main() {
 	window.RegisterTexture(scene.GetTexture());
 
 
-	Node nodeArr[2 * SPHERE_COUNT - 1];
-	Cube cubes[CUBES_COUNT];
-	Sphere spheres[SPHERE_COUNT];
+	
+	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
+	parser.Parse();
+	
+	int SPHERE_COUNT = parser.num_spheres;
+	int CUBES_COUNT = parser.num_cubes;
+	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT;
+	int NODE_COUNT = 2 * SHAPE_COUNT - 1;
 
-	for (int i = 0; i < SPHERE_COUNT; i++)
+	vector<Node> nodeArr = parser.nodes;
+
+	int* parts= new int[4 * (SHAPE_COUNT - 1)];
+	CreateParts(parts, nodeArr, 0, true, SHAPE_COUNT);
+
+	for (int i = 0; i < 4 * (SHAPE_COUNT - 1); i++)
 	{
-		float x = rand() / (float)RAND_MAX * 4-2;
-		float y = rand() / (float)RAND_MAX * 4-2;
-		float z = rand() / (float)RAND_MAX * 4-2;
-		float radius = 2.5f;
-		int r = rand() / (float)RAND_MAX * 155+100;
-		int g = rand() / (float)RAND_MAX * 155+100;
-		int b = rand() / (float)RAND_MAX * 155+100;
-		spheres[i] = Sphere{ radius, make_float3(x,y,z), make_int3(r,g,b) };
+		std::cout << parts[i] << " ";
 	}
-
-	cubes[0] = Cube{ make_float3(-1,-1,-1),make_float3(1,-1,-1),make_float3(1,1,-1),make_float3(-1,1,-1),
-			make_float3(-1,-1,1),make_float3(1,-1,1),make_float3(1,1,1),make_float3(-1,1,1) };
-
-	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++)
-	{
-		int parent = (i - 1) / 2;
-		nodeArr[i] = Node{ -1,-1,parent,1, nullptr,nullptr,0 };
-	}
-	for (int i = 0; i < SPHERE_COUNT - 1; i++)
-	{
-		int left = 2 * i + 1;
-		int right = 2 * i + 2;
-		int parent = (i - 1) / 2;
-		nodeArr[i] = Node{ left, right, parent,1,nullptr, nullptr,2 };
-	}
-	nodeArr[0].parent = -1;
-	nodeArr[0].operation = 2;
-
-
-	int parts[4 * (SPHERE_COUNT - 1)];
-	CreateParts(parts, nodeArr, 0, true, SPHERE_COUNT);
-
-	/*Node nodeArr[2 * SPHERE_COUNT - 1];
-
-	nodeArr[0] = Node{ 1,10,-1,0,0,0,0,0 };
-	nodeArr[1] = Node{ 2,9,0,0,0,0,0,1 };
-	nodeArr[2] = Node{ 3,4,1,0,0,0,0,2 };
-	nodeArr[3] = Node{ 5,6,2,0,0,0,0,2 };
-	nodeArr[4] = Node{ 8,7,2,0,0,0,0,2 };
-
-	nodeArr[5] = Node{ -1,-1,3, 1,0,0,1,0 };
-	nodeArr[6] = Node{ -1,-1,3, -1,0,0,1,0 };
-	nodeArr[7] = Node{ -1,-1,4, 0,1,0,1,0 };
-	nodeArr[8] = Node{ -1,-1,4, 0,-1,0,1,0 };
-	nodeArr[9] = Node{ -1,-1,1, 0,0,0,1.5,0 };
-	nodeArr[10] = Node{ -1,-1,0, 1,1,0,0.5,0 };
-
-	int parts[4 * (SPHERE_COUNT - 1)] = { 0,9,10,11,0,7,8,9,0,3,4,7,0,1,2,3,4,5,6,7 };*/
 
 	//copy sphere and texture to gpu
 	unsigned char* dev_texture_data;
@@ -154,7 +114,8 @@ int main() {
 	float* dev_intersecion_points;
 	float* dev_intersection_result;
 
-
+	Sphere* spheres = parser.spheres.data();
+	Cube* cubes = parser.cubes.data();
 
 	cudaError_t err;
 
@@ -163,17 +124,12 @@ int main() {
 		printf("cudaMalloc dev_spheres error: %s\n", cudaGetErrorString(err));
 	}
 
-	for (int i = SPHERE_COUNT - 1; i < 2 * SPHERE_COUNT - 1; i++) {
-		nodeArr[i].sphere = &dev_spheres[i - (SPHERE_COUNT - 1)];
-	}
-
 	err = cudaMalloc(&dev_cubes, CUBES_COUNT * sizeof(Cube));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_cubes error: %s\n", cudaGetErrorString(err));
 	}
 
-	nodeArr[SPHERE_COUNT-1].cube = dev_cubes;
-	nodeArr[SPHERE_COUNT-1].shape = 2;
+	parser.AttachShapes(dev_cubes, dev_spheres);
 
 	err = cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
 	if (err != cudaSuccess) {
@@ -207,17 +163,17 @@ int main() {
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
-	err = cudaMalloc(&dev_parts, 4*(SPHERE_COUNT - 1) * sizeof(int));
+	err = cudaMalloc(&dev_parts, 4*(SHAPE_COUNT - 1) * sizeof(int));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
 
 
-	cudaMemcpy(dev_tree, nodeArr, NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_tree, nodeArr.data(), NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_parts, parts, 4*(SPHERE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_spheres, spheres, SPHERE_COUNT * sizeof(Sphere), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_cubes, cubes, CUBES_COUNT * sizeof(Cube), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_parts, parts, 4*(SHAPE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_spheres, spheres, MAX_SHAPES * sizeof(Sphere), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_cubes, cubes, MAX_SHAPES * sizeof(Cube), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
@@ -233,7 +189,7 @@ int main() {
 
 
 		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion,
-			SPHERE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres, dev_cubes);
+			SHAPE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres, dev_cubes);
 		//scene.UpdateTextureCpu(tree);
 
 		// copy texture to cpu

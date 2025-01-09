@@ -115,18 +115,23 @@ bool TreeParser::Parse()
 	}
 
 	vector<string> indexes = vector<string>();
-	vector<string> leavesIndexes = vector<string>();
-	
+
 	stack<string> stack;
 	stack.push(parse_nodes[root].indexStr);
-	
+
 	int i = 0;
 	while (!stack.empty())
 	{
 		string index = stack.top();
 		stack.pop();
-		indexes.push_back(index);
 		printf("index: %s\n", index.c_str());
+		if (index[0] != 't')
+		{
+			leavesIndexes.push_back(index);
+			continue;
+		}
+		indexes.push_back(index);
+		
 
 		// find node with this index
 		ParseNode node;
@@ -139,27 +144,12 @@ bool TreeParser::Parse()
 			}
 		}
 
-		if (node.right[0] != 't' && node.left[0] != 't')
-		{
-			leavesIndexes.push_back(node.left);
-			leavesIndexes.push_back(node.right);
-		}
-		else
-		{
-			if (node.right[0] != 't')
-				leavesIndexes.push_back(node.right);
-			else
-				stack.push(node.right);
-
-			if (node.left[0] != 't')
-				leavesIndexes.push_back(node.left);
-			else
-				stack.push(node.left);
-		}
+		stack.push(node.right);
+		stack.push(node.left);
 
 		
 
-		
+
 		i++;
 	}
 
@@ -224,4 +214,19 @@ bool TreeParser::Parse()
 	}
 
 	return true;
+}
+
+void TreeParser::AttachShapes(Cube* dev_cubes, Sphere* dev_spheres)
+{
+	for (int i = 0; i < leavesIndexes.size(); i++)
+	{
+		if (leavesIndexes[i][0] == 's')
+		{
+			nodes[i + num_spheres + num_cubes - 1].sphere = &dev_spheres[stoi(leavesIndexes[i].substr(1))];
+		}
+		else
+		{
+			nodes[i + num_spheres + num_cubes - 1].cube = &dev_cubes[stoi(leavesIndexes[i].substr(1))];
+		}
+	}
 }

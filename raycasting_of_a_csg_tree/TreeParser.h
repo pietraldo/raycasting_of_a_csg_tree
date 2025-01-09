@@ -10,6 +10,7 @@
 #include "cuda_runtime.h"
 
 #include "Tree.h"
+#include "Constants.h"
 
 using namespace std;
 
@@ -52,8 +53,13 @@ class TreeParser
 {
 	string fileName;
 
-	const int MAX_SHAPES = 256;
+	
 
+	
+
+	
+	bool CreateObjects();
+public:
 	int num_spheres = 0;
 	int num_cubes = 0;
 	int num_nodes = 0;
@@ -62,11 +68,12 @@ class TreeParser
 	vector<ParseNode> parse_nodes= vector<ParseNode>();
 	vector<Cube> cubes = vector<Cube>(MAX_SHAPES);
 	vector<Sphere> spheres = vector<Sphere>(MAX_SHAPES);
+	vector<string> leavesIndexes = vector<string>();
 
-	bool CreateObjects();
-public:
 	TreeParser(string fileName);
-
+	
+	
+	void AttachShapes(Cube* dev_cubes, Sphere* dev_spheres);
 	bool Parse();
 };
 

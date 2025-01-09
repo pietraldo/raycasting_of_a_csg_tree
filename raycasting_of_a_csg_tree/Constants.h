@@ -5,3 +5,5 @@ const int SCR_HEIGHT = 800;
 
 const int TEXTURE_WIDHT = 800;
 const int TEXTURE_HEIGHT = 600;
+
+const int MAX_SHAPES = 256;

@@ -146,7 +146,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	{
 		int nodeIndex = i;
 
-		if (dev_tree[nodeIndex].operation == 0)
+		if (dev_tree[nodeIndex].operation == '-')
 		{
 			int p1 = parts[4 * nodeIndex];
 			int k1 = parts[4 * nodeIndex + 1];
@@ -264,7 +264,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 		}
 
-		else if (dev_tree[nodeIndex].operation == 1)
+		else if (dev_tree[nodeIndex].operation == '*')
 		{
 			int p1 = parts[4 * nodeIndex];
 			int k1 = parts[4 * nodeIndex + 1];
