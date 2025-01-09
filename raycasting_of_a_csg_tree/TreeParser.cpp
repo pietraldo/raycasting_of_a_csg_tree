@@ -5,9 +5,7 @@ TreeParser::TreeParser(string fileName)
 	this->fileName = fileName;
 }
 
-
-
-bool TreeParser::Parse()
+bool TreeParser::CreateObjects()
 {
 	ifstream file(fileName);
 	if (!file.is_open())
@@ -15,7 +13,6 @@ bool TreeParser::Parse()
 		cout << "File not found" << endl;
 		return false;
 	}
-
 	string line;
 	while (getline(file, line))
 	{
@@ -26,10 +23,12 @@ bool TreeParser::Parse()
 				istringstream iss(line);
 				ParseNode entry;
 
-				iss >> entry.indexStr >> entry.left >> entry.right >> entry.operation;
+				iss >> entry.indexStr >> entry.left >> entry.operation >> entry.right;
 				entry.index = stoi(entry.indexStr.substr(1, entry.indexStr.find(')')));
+				entry.indexStr = entry.indexStr.substr(0, entry.indexStr.find(')'));
 
 				parse_nodes.push_back(entry);
+				num_nodes++;
 			}
 			else if (line[0] == 'c')
 			{
@@ -52,10 +51,11 @@ bool TreeParser::Parse()
 					make_float3(x + width, y, z + depth),
 					make_float3(x, y, z + depth),
 					make_float3(x, y + height, z),
-					make_float3(x+width, y + height, z),
-					make_float3(x+width, y + height, z+depth),
-					make_float3(x, y + height, z+depth),
+					make_float3(x + width, y + height, z),
+					make_float3(x + width, y + height, z + depth),
+					make_float3(x, y + height, z + depth),
 					make_int3(entry.r, entry.g, entry.b) };
+				num_cubes++;
 			}
 			else if (line[0] == 's')
 			{
@@ -65,12 +65,162 @@ bool TreeParser::Parse()
 				iss >> entry.index >> entry.x >> entry.y >> entry.z >> entry.radius >> entry.r >> entry.g >> entry.b;
 				int index = stoi(entry.index.substr(1, entry.index.find(')')));
 				spheres[index] = Sphere{ entry.radius, make_float3(entry.x,entry.y,entry.z), make_int3(entry.r,entry.g,entry.b) };
+				num_spheres++;
 			}
 		}
 		catch (...)
 		{
 			cout << "Error parsing file" << endl;
 			return false;
+		}
+	}
+	return num_spheres + num_cubes == num_nodes + 1;
+}
+
+bool TreeParser::Parse()
+{
+	if (!CreateObjects())
+	{
+		return false;
+	}
+
+
+	// find root
+	int root = -1;
+	for (int i = 0; i < parse_nodes.size(); i++)
+	{
+		string index = parse_nodes[i].indexStr;
+		bool isRoot = true;
+		for (int j = 0; j < parse_nodes.size(); j++)
+		{
+			if (i == j) continue;
+			if (parse_nodes[j].left == index || parse_nodes[j].right == index)
+			{
+				isRoot = false;
+				break;
+			}
+		}
+		if (isRoot)
+		{
+			if (root != -1)
+			{
+				cout << "Multiple roots found" << endl;
+				return false;
+			}
+			else
+			{
+				root = i;
+			}
+		}
+	}
+
+	vector<string> indexes = vector<string>();
+	vector<string> leavesIndexes = vector<string>();
+	indexes.push_back(parse_nodes[root].indexStr);
+
+	stack<string> stack;
+	stack.push(parse_nodes[root].indexStr);
+	
+	int i = 0;
+	while (!stack.empty())
+	{
+		string index = stack.top();
+		stack.pop();
+		indexes.push_back(index);
+		printf("index: %s\n", index.c_str());
+
+		// find node with this index
+		ParseNode node;
+		for (int j = 0; j < parse_nodes.size(); j++)
+		{
+			if (parse_nodes[j].indexStr == index)
+			{
+				node = parse_nodes[j];
+				break;
+			}
+		}
+
+		if (node.right[0] != 't' && node.left[0] != 't')
+		{
+			leavesIndexes.push_back(node.left);
+			leavesIndexes.push_back(node.right);
+		}
+		else
+		{
+			if (node.right[0] != 't')
+				leavesIndexes.push_back(node.right);
+			else
+				stack.push(node.right);
+
+			if (node.left[0] != 't')
+				leavesIndexes.push_back(node.left);
+			else
+				stack.push(node.left);
+		}
+
+		
+
+		
+		i++;
+	}
+
+	for (int i = 0; i < leavesIndexes.size(); i++)
+	{
+		indexes.push_back(leavesIndexes[i]);
+	}
+
+	nodes = vector<Node>();
+
+	for (int i = 0; i < indexes.size(); i++)
+	{
+		Node node;
+		int left = -1;
+		int right = -1;
+
+		if (indexes[i][0] == 't')
+		{
+			ParseNode parseNode;
+			for (int j = 0; j < parse_nodes.size(); j++)
+			{
+				if (parse_nodes[j].indexStr == indexes[i])
+				{
+					parseNode = parse_nodes[j];
+					break;
+				}
+			}
+
+			for (int j = i + 1; j < indexes.size(); j++)
+			{
+				if (parseNode.left == indexes[j])
+				{
+					left = j;
+				}
+				if (parseNode.right == indexes[j])
+				{
+					right = j;
+				}
+			}
+
+
+
+			node = Node{ left, right, -1, -1, nullptr, nullptr, parseNode.operation[0] };
+
+		}
+		else
+		{
+			int shapeIdx = indexes[i][0] == 's' ? 1 : 2;
+			node = Node{ -1, -1, -1, shapeIdx, nullptr, nullptr, 0 };
+		}
+		nodes.push_back(node);
+	}
+
+	// add parents
+	for (int i = 0; i < nodes.size(); i++)
+	{
+		if (nodes[i].left != -1)
+		{
+			nodes[nodes[i].left].parent = i;
+			nodes[nodes[i].right].parent = i;
 		}
 	}
 

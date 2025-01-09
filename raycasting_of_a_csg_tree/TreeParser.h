@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <stack>
 
 #include "cuda_runtime.h"
 
@@ -53,10 +54,16 @@ class TreeParser
 
 	const int MAX_SHAPES = 256;
 
-	vector<Node> nodes= vector<Node>(2*MAX_SHAPES-1);
+	int num_spheres = 0;
+	int num_cubes = 0;
+	int num_nodes = 0;
+
+	vector<Node> nodes;
 	vector<ParseNode> parse_nodes= vector<ParseNode>();
 	vector<Cube> cubes = vector<Cube>(MAX_SHAPES);
 	vector<Sphere> spheres = vector<Sphere>(MAX_SHAPES);
+
+	bool CreateObjects();
 public:
 	TreeParser(string fileName);
 
