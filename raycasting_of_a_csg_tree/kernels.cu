@@ -166,6 +166,8 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	float r = 1;
 	float h = 3;
 	float3 n = ray;
+	float3 c2 = make_float3(b.x + a.x * h, b.y + a.y * h, b.z + a.z * h);
+	float3 c1 = b;
 
 
 	float pierw = dot3(cross(n, a), cross(n, a)) * r * r - dot3(a, a) * dot3(b, cross(n, a)) * dot3(b, cross(n, a));
@@ -185,19 +187,28 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	float t11 = dot3(a, make_float3(n.x * d1 - b.x, n.y * d1 - b.y, n.z * d1 - b.z));
 	float t22 = dot3(a, make_float3(n.x * d2 - b.x, n.y * d2 - b.y, n.z * d2 - b.z));
 
-	if (t11 >= 0 && t11 <= h)
+	float d3 = dot3(a, c2) / dot3(a, n);
+	float d4 = dot3(a, c1) / dot3(a, n);
+
+	float min=1000;
+	if (dot3(make_float3(n.x*d3-c2.x,n.y*d3-c2.y, n.z*d3-c2.z ), make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z)) < r * r)
 	{
-		dev_intersection_result[x + y * width] = d1;
+		if (d3 < min) min = d3;
 	}
-	else if (t22 >= 0 && t22 <= h)
+	 if (dot3(make_float3(n.x*d4-c1.x,n.y*d4-c1.y, n.z*d4-c1.z ), make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z)) < r * r)
 	{
-		dev_intersection_result[x + y * width] = d2;
+		if (d4 < min) min = d4;
 	}
-	else
+	 if (t11 >= 0 && t11 <= h)
 	{
-		dev_intersection_result[x + y * width] = 1000;
-		return;
+		if (d1 < min) min = d1;
 	}
+	 if (t22 >= 0 && t22 <= h)
+	{
+		if (d2 < min) min = d2;
+	}
+	dev_intersection_result[x + y * width] = min;
+	return;
 
 	
 
