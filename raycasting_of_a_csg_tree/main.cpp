@@ -19,6 +19,7 @@
 #include "Window.h"
 #include "DevStruct.h"
 #include "Tree.h"
+#include "TreeParser.h"
 
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -65,6 +66,9 @@ void CreateParts(int* part,Node* tree, int node, bool isLeft, const int SphereCo
 
 // Main function
 int main() {
+
+	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
+	parser.Parse();
 
 	Window window(SCR_WIDTH, SCR_HEIGHT);
 

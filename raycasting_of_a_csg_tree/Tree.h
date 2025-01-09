@@ -3,6 +3,7 @@
 struct Cube
 {
 	float3 vertices[8];
+	int3 color;
 };
 
 struct Sphere
