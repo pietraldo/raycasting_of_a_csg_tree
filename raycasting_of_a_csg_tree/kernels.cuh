@@ -51,6 +51,7 @@ __host__ __device__ bool SphereUnion(bool a, bool b);
 
 __host__ __device__ bool SphereContains(float sx, float sy, float sz, float sr, float x, float y, float z);
 
+__host__ __device__ float3 cross(const float3& a, const float3& b);
 
 
 //__global__ void UpdatePixel(unsigned char* dev_texture_data, float width, float height, mat4 projection, mat4 view, Sphere* spheres,
