@@ -222,11 +222,15 @@ void TreeParser::AttachShapes(Cube* dev_cubes, Sphere* dev_spheres)
 	{
 		if (leavesIndexes[i][0] == 's')
 		{
+			printf("%d: %d\n", i + num_spheres + num_cubes - 1, stoi(leavesIndexes[i].substr(1)));
 			nodes[i + num_spheres + num_cubes - 1].sphere = &dev_spheres[stoi(leavesIndexes[i].substr(1))];
+			nodes[i + num_spheres + num_cubes - 1].shape = 1;
 		}
 		else
 		{
+			printf("%d: %d\n", i + num_spheres + num_cubes - 1, stoi(leavesIndexes[i].substr(1)));
 			nodes[i + num_spheres + num_cubes - 1].cube = &dev_cubes[stoi(leavesIndexes[i].substr(1))];
+			nodes[i + num_spheres + num_cubes - 1].shape = 2;
 		}
 	}
 }

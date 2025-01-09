@@ -83,12 +83,13 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 	if (x >= width || y >= height)
 		return;
-
+	
+		
 	float t1 = -1, t2 = -1;
 	const int sphereCount = 256; // TODO: change to sphere_count
 	float sphereIntersections[2 * sphereCount]; // 2 floats for each sphere
 	float tempArray[2 * sphereCount]; // 2 floats for each sphere
-
+	
 	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
 	float3 light_pos = make_float3(light_pos_ptr[0], light_pos_ptr[1], light_pos_ptr[2]);
 
@@ -124,6 +125,10 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 			float3 spherePosition = make_float3(dev_tree[k].sphere->position.x, dev_tree[k].sphere->position.y, dev_tree[k].sphere->position.z);
 			float radius = dev_tree[k].sphere->radius;
 			IntersectionPointSphere(spherePosition, radius, camera_pos, ray, t1, t2);
+			/*if (x == 0 && y == 0)
+			{
+				printf("dev_tree %f\n", dev_tree[k].sphere->radius);
+			}*/
 		}
 		else if (dev_tree[k].shape==2)
 		{
@@ -134,12 +139,17 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 				t1 = -1;
 				t2 = -1;
 			}
+			
 		}
 
 		int m = k - sphere_count + 1;
+		
+
 		sphereIntersections[2 * m] = t1;
 		sphereIntersections[2 * m + 1] = t2;
 	}
+	
+	
 
 	unsigned int start2 = clock();
 	for (int i = sphere_count - 2; i >= 0; i--)
@@ -436,7 +446,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 		}
 
 	}
-
+	
 	dev_intersection_result[x + y * width] = sphereIntersections[0] > 0 ? sphereIntersections[0] : 1000;
 
 }
@@ -519,7 +529,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result, dev_spheres);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
-		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
+		printf("ColorPixel launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
 	auto end3 = std::chrono::high_resolution_clock::now();

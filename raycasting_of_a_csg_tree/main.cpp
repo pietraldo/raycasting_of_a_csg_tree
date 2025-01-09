@@ -90,10 +90,9 @@ int main() {
 	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT;
 	int NODE_COUNT = 2 * SHAPE_COUNT - 1;
 
-	vector<Node> nodeArr = parser.nodes;
 
 	int* parts= new int[4 * (SHAPE_COUNT - 1)];
-	CreateParts(parts, nodeArr, 0, true, SHAPE_COUNT);
+	CreateParts(parts, parser.nodes, 0, true, SHAPE_COUNT);
 
 	for (int i = 0; i < 4 * (SHAPE_COUNT - 1); i++)
 	{
@@ -119,12 +118,12 @@ int main() {
 
 	cudaError_t err;
 
-	err = cudaMalloc(&dev_spheres, SPHERE_COUNT * sizeof(Sphere));
+	err = cudaMalloc(&dev_spheres, MAX_SHAPES * sizeof(Sphere));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_spheres error: %s\n", cudaGetErrorString(err));
 	}
 
-	err = cudaMalloc(&dev_cubes, CUBES_COUNT * sizeof(Cube));
+	err = cudaMalloc(&dev_cubes, MAX_SHAPES * sizeof(Cube));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_cubes error: %s\n", cudaGetErrorString(err));
 	}
@@ -155,7 +154,7 @@ int main() {
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
-	err = cudaMalloc(&dev_intersecion_points, TEXTURE_WIDHT * TEXTURE_HEIGHT * SPHERE_COUNT * 2 * sizeof(float));
+	err = cudaMalloc(&dev_intersecion_points, TEXTURE_WIDHT * TEXTURE_HEIGHT * SHAPE_COUNT * 2 * sizeof(float));
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
@@ -169,7 +168,7 @@ int main() {
 	}
 
 
-	cudaMemcpy(dev_tree, nodeArr.data(), NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_tree, parser.nodes.data(), NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_parts, parts, 4*(SHAPE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_spheres, spheres, MAX_SHAPES * sizeof(Sphere), cudaMemcpyHostToDevice);
