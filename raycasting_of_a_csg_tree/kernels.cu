@@ -731,6 +731,34 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	}
 
 	//if (!intersection) return;
+	shapeColor = make_int3(255, 0, 0);
+	float3 b = make_float3(0 - camera_pos.x, 0 - camera_pos.y, 0 - camera_pos.z);
+	float3 a = NormalizeVector3(make_float3(0, 1, 1));
+	float r = 1;
+	float h = 3;
+
+	float3 v = make_float3(
+		pixelPosition.x ,
+		pixelPosition.y ,
+		pixelPosition.z 
+	);
+
+	// Project v onto the axis to find the closest point on the axis
+	float projection_length = v.x * a.x + v.y * a.y + v.z * a.z;
+	float3 projection2 = make_float3(
+		a.x * projection_length,
+		a.y * projection_length,
+		a.z * projection_length
+	);
+
+	// Compute the vector from the projected point to the surface point
+	float3 normal = make_float3(
+		v.x - projection2.x,
+		v.y - projection2.y,
+		v.z - projection2.z
+	);
+
+	N = NormalizeVector3(normal);
 
 	float3 lightRay = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
 	float3 L = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
@@ -738,8 +766,13 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	float3 R = NormalizeVector3(make_float3(2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z - L.z));
 
 
-	//float3 color1 = CalculateColor(N, L, V, R, shapeColor);
-	float3 color1 = make_float3(255,255,255);
+	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
+	
+	
+	
+	
+
+
 
 	int index2 = 3 * (y * width + x);
 	dev_texture_data[index2] = (int)color1.x;
