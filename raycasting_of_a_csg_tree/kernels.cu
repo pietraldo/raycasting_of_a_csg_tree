@@ -84,10 +84,11 @@ __host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& r
 	if (t_close == tz_close)
 	{
 		if (r.z > 0)
-			N = make_float3(0, 0, 1);
-		else
 			N = make_float3(0, 0, -1);
+		else
+			N = make_float3(0, 0, 1);
 	}
+	
 
 	if (t_far == tx_far)
 	{
