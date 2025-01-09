@@ -13,6 +13,15 @@ struct Sphere
 	int3 color;
 };
 
+struct Cylinder
+{
+	float radius;
+	float height;
+	float3 position;
+	float3 axis;
+	int3 color;
+};
+
 struct Node
 {
 	int left;

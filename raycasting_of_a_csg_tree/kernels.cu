@@ -118,6 +118,120 @@ __host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& r
 	return t_close < t_far;
 }
 
+__host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
+{
+	float3 b = make_float3(cylinder.position.x - rayOrigin.x, cylinder.position.y - rayOrigin.y, cylinder.position.z - rayOrigin.z);
+	float3 a = NormalizeVector3(cylinder.axis);
+	float r = cylinder.radius;
+	float h = cylinder.height;
+	float3 n = rayDirection;
+	float3 c1 = b;
+	float3 c2 = make_float3(b.x + a.x * h, b.y + a.y * h, b.z + a.z * h);
+	
+	float pierw = dot3(cross(n, a), cross(n, a)) * r * r - dot3(a, a) * dot3(b, cross(n, a)) * dot3(b, cross(n, a));
+	if (pierw < 0)
+	{
+		return false;
+	}
+
+	float d1 = (dot3(cross(n, a), cross(b, a))
+		- sqrt(pierw))
+		/ dot3(cross(n, a), cross(n, a));
+	float d2 = (dot3(cross(n, a), cross(b, a))
+		+ sqrt(pierw))
+		/ dot3(cross(n, a), cross(n, a));
+
+	float t11 = dot3(a, make_float3(n.x * d1 - b.x, n.y * d1 - b.y, n.z * d1 - b.z));
+	float t22 = dot3(a, make_float3(n.x * d2 - b.x, n.y * d2 - b.y, n.z * d2 - b.z));
+
+	float d3 = dot3(a, c2) / dot3(a, n);
+	float d4 = dot3(a, c1) / dot3(a, n);
+
+	if (!(dot3(make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z), make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z)) < r * r))
+	{
+		d3 = 1000;
+	}
+	if (!(dot3(make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z), make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z)) < r * r))
+	{
+		d4 = 1000;
+	}
+	if (!(t11 >= 0 && t11 <= h))
+	{
+		d1 = 1000;
+	}
+	if (!(t22 >= 0 && t22 <= h))
+	{
+		d2 = 1000;
+	}
+
+	if (d1 < d2 && d1 < d3 && d1 < d4)
+	{
+		t1 = d1;
+		if (d2 < d3 && d2 < d4)
+		{
+			t2 = d2;
+		}
+		else if (d3 < d4)
+		{
+			t2 = d3;
+		}
+		else
+		{
+			t2 = d4;
+		}
+	}
+	else if (d2 < d3 && d2 < d4)
+	{
+		t1 = d2;
+		if (d1 < d3 && d1 < d4)
+		{
+			t2 = d1;
+		}
+		else if (d3 < d4)
+		{
+			t2 = d3;
+		}
+		else
+		{
+			t2 = d4;
+		}
+	}
+	else if (d3 < d4)
+	{
+		t1 = d3;
+		if (d1 < d2 && d1 < d4)
+		{
+			t2 = d1;
+		}
+		else if (d2 < d4)
+		{
+			t2 = d2;
+		}
+		else
+		{
+			t2 = d4;
+		}
+	}
+	else
+	{
+		t1 = d4;
+		if (d1 < d2 && d1 < d3)
+		{
+			t2 = d1;
+		}
+		else if (d2 < d3)
+		{
+			t2 = d2;
+		}
+		else
+		{
+			t2 = d3;
+		}
+	}
+
+	return true;
+}
+
 __global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points,
 	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view,
 	Sphere* dev_spheres, Cube* cubes, unsigned char* dev_texture_data, float* light_pos_ptr)
@@ -160,54 +274,11 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	ray.z = target.z;
 
 
+	Cylinder cylinder{1,3,make_float3(0,0,0), make_float3(0,1,1), make_int3(255,255,0)};
+	IntersectionPointCylinder(cylinder, camera_pos, ray, t1, t2, make_float3(0, 0, 0), make_float3(0, 0, 0));
 
-	float3 b = make_float3(0 - camera_pos.x, 0 - camera_pos.y, 0 - camera_pos.z);
-	float3 a = NormalizeVector3(make_float3(0, 1, 1));
-	float r = 1;
-	float h = 3;
-	float3 n = ray;
-	float3 c2 = make_float3(b.x + a.x * h, b.y + a.y * h, b.z + a.z * h);
-	float3 c1 = b;
-
-
-	float pierw = dot3(cross(n, a), cross(n, a)) * r * r - dot3(a, a) * dot3(b, cross(n, a)) * dot3(b, cross(n, a));
-	if (pierw < 0)
-	{
-		dev_intersection_result[x + y * width] = 1000;
-		return;
-	}
-
-	float d1 = (dot3(cross(n, a), cross(b, a))
-		- sqrt(pierw))
-		/ dot3(cross(n, a), cross(n, a));
-	float d2 = (dot3(cross(n, a), cross(b, a))
-		+ sqrt(pierw))
-		/ dot3(cross(n, a), cross(n, a));
-
-	float t11 = dot3(a, make_float3(n.x * d1 - b.x, n.y * d1 - b.y, n.z * d1 - b.z));
-	float t22 = dot3(a, make_float3(n.x * d2 - b.x, n.y * d2 - b.y, n.z * d2 - b.z));
-
-	float d3 = dot3(a, c2) / dot3(a, n);
-	float d4 = dot3(a, c1) / dot3(a, n);
-
-	float min=1000;
-	if (dot3(make_float3(n.x*d3-c2.x,n.y*d3-c2.y, n.z*d3-c2.z ), make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z)) < r * r)
-	{
-		if (d3 < min) min = d3;
-	}
-	 if (dot3(make_float3(n.x*d4-c1.x,n.y*d4-c1.y, n.z*d4-c1.z ), make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z)) < r * r)
-	{
-		if (d4 < min) min = d4;
-	}
-	 if (t11 >= 0 && t11 <= h)
-	{
-		if (d1 < min) min = d1;
-	}
-	 if (t22 >= 0 && t22 <= h)
-	{
-		if (d2 < min) min = d2;
-	}
-	dev_intersection_result[x + y * width] = min;
+	//printf("%f %f\n", t1, t2);
+	dev_intersection_result[x + y * width] = t1;
 	return;
 
 	
@@ -649,7 +720,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float t = dev_intersection_result[x + y * width];
 
-	if (t == 1000)
+	if (t == 1000 || t<0)
 	{
 		int index2 = 3 * (y * width + x);
 		dev_texture_data[index2] = 0;
@@ -740,7 +811,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 			}
 		}
 	}
-
+	
 	//if (!intersection) return;
 	shapeColor = make_int3(255, 0, 0);
 	float3 b = make_float3(0 - camera_pos.x, 0 - camera_pos.y, 0 - camera_pos.z);
