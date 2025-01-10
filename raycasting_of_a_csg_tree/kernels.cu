@@ -1,42 +1,8 @@
 #include "kernels.cuh"
 
-__host__ __device__ void MultiplyVectorByMatrix4(float4& vector, const float* matrix)
-{
-	float4 result = { 0, 0, 0, 0 };
-	result.x = vector.x * matrix[0] + vector.y * matrix[1] + vector.z * matrix[2] + vector.w * matrix[3];
-	result.y = vector.x * matrix[4] + vector.y * matrix[5] + vector.z * matrix[6] + vector.w * matrix[7];
-	result.z = vector.x * matrix[8] + vector.y * matrix[9] + vector.z * matrix[10] + vector.w * matrix[11];
-	result.w = vector.x * matrix[12] + vector.y * matrix[13] + vector.z * matrix[14] + vector.w * matrix[15];
-
-	vector = result;
-}
-
-__host__ __device__ float4 NormalizeVector4(float4 vector)
-{
-	float length = sqrt(vector.x * vector.x +
-		vector.y * vector.y +
-		vector.z * vector.z +
-		vector.w * vector.w);
-
-	vector.x /= length;
-	vector.y /= length;
-	vector.z /= length;
-	vector.w /= length;
-
-	return vector;
-}
 
 
-__host__ __device__ float3 NormalizeVector3(float3 vector)
-{
-	float length = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
-	vector.x /= length;
-	vector.y /= length;
-	vector.z /= length;
-	return vector;
-}
-
-__host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
+__device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
 {
 	float3 l = make_float3(cube.vertices[0].x, cube.vertices[0].y, cube.vertices[0].z);
 	float3 h = make_float3(cube.vertices[6].x, cube.vertices[6].y, cube.vertices[6].z);
@@ -118,7 +84,7 @@ __host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& r
 	return t_close < t_far;
 }
 
-__host__ __device__ float3 CalculateNormalVectorCylinder(const Cylinder& cylinder, float3 pixelPosition)
+__device__ float3 CalculateNormalVectorCylinder(const Cylinder& cylinder, float3 pixelPosition)
 {
 	float3 a = NormalizeVector3(cylinder.axis);
 
@@ -146,7 +112,7 @@ __host__ __device__ float3 CalculateNormalVectorCylinder(const Cylinder& cylinde
 	return NormalizeVector3(normal);
 }
 
-__host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
+__device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
 {
 	float3 b = make_float3(cylinder.position.x - rayOrigin.x, cylinder.position.y - rayOrigin.y, cylinder.position.z - rayOrigin.z);
 	float3 a = NormalizeVector3(cylinder.axis);
@@ -255,9 +221,9 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 	return true;
 }
 
-__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree,
+__global__ void CalculateInterscetion(int width, int height, int shape_count, Node* dev_tree,
 	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view,
-	Sphere* dev_spheres, Cube* cubes, unsigned char* dev_texture_data, float* light_pos_ptr)
+	 unsigned char* dev_texture_data, float* light_pos_ptr)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -296,20 +262,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 	ray.y = target.y;
 	ray.z = target.z;
 
-
-	/*Cylinder cylinder{ 1,3,make_float3(0,0,0), make_float3(0,1,1), make_int3(255,255,0) };
-	if (!IntersectionPointCylinder(cylinder, camera_pos, ray, t1, t2, make_float3(0, 0, 0), make_float3(0, 0, 0)))
-		t1 = 1000;
-
-	dev_intersection_result[x + y * width] = t1;
-	return;*/
-
-
-
-
-	unsigned int start = clock();
-	int index = (x + y * width) * sphere_count * 2;
-	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
+	for (int k = shape_count - 1; k < 2 * shape_count - 1; k++)
 	{
 		float t1 = -1, t2 = -1;
 		if (dev_tree[k].shape == 1)
@@ -341,17 +294,15 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 			}
 		}
 
-		int m = k - sphere_count + 1;
+		int m = k - shape_count + 1;
 		
 
 		sphereIntersections[2 * m] = t1;
 		sphereIntersections[2 * m + 1] = t2;
 	}
 	
-	
 
-	unsigned int start2 = clock();
-	for (int i = sphere_count - 2; i >= 0; i--)
+	for (int i = shape_count - 2; i >= 0; i--)
 	{
 		int nodeIndex = i;
 
@@ -651,48 +602,32 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 }
 
 
-void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
-	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree,
-	float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres, Cube* dev_cubes)
+void UpdateOnGPU(GPUdata& data, int width, int height)
 {
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
 
-
-	auto start2 = std::chrono::high_resolution_clock::now();
 	dim3 grid2(width, height);
-	CalculateInterscetion << <grid, block >> > (width, height, sphere_count, dev_tree, dev_intersection_result,
-		dev_parts, camera_pos, projection, view, dev_spheres, dev_cubes, dev_texture_data, light_pos);
+	CalculateInterscetion << <grid, block >> > (width, height, data.ShapeCount, data.dev_tree, data.dev_intersection_result,
+		data.dev_parts, data.dev_camera_position, data.dev_projection, data.dev_view,  data.dev_texture_data, data.dev_light_postion);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
-	auto end2 = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed2 = end2 - start2;
+	
 
-	//printf("CalculateInterscetion time: %f\n", elapsed2.count());
-
-
-
-	auto start3 = std::chrono::high_resolution_clock::now();
-	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersection_result, dev_spheres);
+	ColorPixel << <grid, block >> > (data.dev_texture_data, width, height, data.ShapeCount, data.dev_projection,
+		data.dev_view, data.dev_camera_position, data.dev_light_postion, data.dev_tree, data.dev_intersection_result);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("ColorPixel launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
-	auto end3 = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed3 = end3 - start3;
-
-	//printf("ColorPixel time: %f\n", elapsed3.count());
-
-	//printf("%f %f \n", elapsed2.count(), elapsed3.count());
-
 }
 
-__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
-	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersection_result, Sphere* dev_spheres)
+__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, int shape_count,
+	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersection_result)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -743,9 +678,8 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 
 	bool intersection = false;
-	int index = (x + y * width) * sphere_count * 2;
 	int3 shapeColor = make_int3(0, 0, 0);
-	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
+	for (int k = shape_count - 1; k < 2 * shape_count - 1; k++)
 	{
 		float t1 = -1, t2 = -1;
 
@@ -869,7 +803,7 @@ __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  floa
 	return make_float3(color.x * col, color.y * col, color.z * col);
 }
 
-__host__ __device__ bool IntersectionPointSphere(
+__device__ bool IntersectionPointSphere(
 	const float3& spherePosition,
 	float radius,
 	const float3& rayOrigin,
@@ -900,6 +834,44 @@ __host__ __device__ bool IntersectionPointSphere(
 	t2 = (-b + sqrtDiscriminant) / (2.0f * a);
 
 	return true; // Intersection found
+}
+
+
+
+__host__ __device__ void MultiplyVectorByMatrix4(float4& vector, const float* matrix)
+{
+	float4 result = { 0, 0, 0, 0 };
+	result.x = vector.x * matrix[0] + vector.y * matrix[1] + vector.z * matrix[2] + vector.w * matrix[3];
+	result.y = vector.x * matrix[4] + vector.y * matrix[5] + vector.z * matrix[6] + vector.w * matrix[7];
+	result.z = vector.x * matrix[8] + vector.y * matrix[9] + vector.z * matrix[10] + vector.w * matrix[11];
+	result.w = vector.x * matrix[12] + vector.y * matrix[13] + vector.z * matrix[14] + vector.w * matrix[15];
+
+	vector = result;
+}
+
+__host__ __device__ float4 NormalizeVector4(float4 vector)
+{
+	float length = sqrt(vector.x * vector.x +
+		vector.y * vector.y +
+		vector.z * vector.z +
+		vector.w * vector.w);
+
+	vector.x /= length;
+	vector.y /= length;
+	vector.z /= length;
+	vector.w /= length;
+
+	return vector;
+}
+
+
+__host__ __device__ float3 NormalizeVector3(float3 vector)
+{
+	float length = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+	vector.x /= length;
+	vector.y /= length;
+	vector.z /= length;
+	return vector;
 }
 
 __host__ __device__ float dot3(const float3& a, const float3& b)

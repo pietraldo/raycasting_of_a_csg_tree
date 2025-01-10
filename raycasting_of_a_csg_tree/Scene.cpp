@@ -84,8 +84,7 @@ void Scene::UpdateTextureGpu(GPUdata& data)
 	cudaMemcpy(data.dev_camera_position, camera_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(data.dev_light_postion, light_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
 
-	UpdateOnGPU(data.dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, data.ShapeCount, data.dev_projection, 
-		data.dev_view, data.dev_camera_position, data.dev_light_postion, data.dev_tree, data.dev_intersection_result, data.dev_parts, data.dev_spheres, data.dev_cubes);
+	UpdateOnGPU(data, TEXTURE_WIDHT, TEXTURE_HEIGHT);
 }
 
 void Scene::SetLightPosition(vec3 light_pos)

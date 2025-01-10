@@ -25,8 +25,7 @@ Window::Window(const int width, const int height)
 	}
 
 	glfwMakeContextCurrent(window);
-	//glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+	
 	// Load OpenGL functions using GLAD
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		std::cerr << "Failed to initialize GLAD\n";
