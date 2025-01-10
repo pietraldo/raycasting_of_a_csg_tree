@@ -9,16 +9,16 @@
 
 
 
-__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result,
+__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersection_result,
 	int* parts, float* camera_pos_ptr, float* projection, float* view, Sphere* dev_spheres, Cube* cubes, unsigned char* dev_texture_data, float* light_pos_ptr);
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
-	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, Sphere* dev_spheres);
+	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersection_result, Sphere* dev_spheres);
 
 
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	size_t sphere_count, float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree,
-	float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres, Cube* dev_cubes);
+	 float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres, Cube* dev_cubes);
 
 __host__ __device__ float3 CalculateNormalVectorCylinder(const Cylinder& cylinder, float3 pixelPosition);
 __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R,const int3& color);

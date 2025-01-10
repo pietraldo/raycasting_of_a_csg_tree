@@ -13,6 +13,13 @@
 
 class Window
 {
+private:
+	GLFWwindow* window;
+	float lastMouseX = 0, lastMouseY = 0;
+
+	void ProccessKeys(Scene& scene, float dt);
+	void ProccessMouse(Scene& scene, float dt);
+
 public:
 	Window(const int width, const int height);
 	void Render(Scene& scene);
@@ -21,12 +28,5 @@ public:
 	GLFWwindow* GetWindow() { return window; }
 	void ClearScreen();
 	void RegisterTexture(Texture& texture);
-
-private:
-	GLFWwindow* window;
-	float lastMouseX = 0, lastMouseY = 0;
-
-	void ProccessKeys(Scene& scene, float dt);
-	void ProccessMouse(Scene& scene, float dt);
 };
 

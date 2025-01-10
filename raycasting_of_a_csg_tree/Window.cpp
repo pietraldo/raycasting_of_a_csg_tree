@@ -1,5 +1,7 @@
 #include "Window.h"
 
+
+
 Window::Window(const int width, const int height)
 {
 	lastMouseX = width / 2;
@@ -38,7 +40,11 @@ Window::Window(const int width, const int height)
 	// Initialize backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
+
+	
 }
+
+
 
 void Window::ProccessInput(Scene& scene, float dt)
 {

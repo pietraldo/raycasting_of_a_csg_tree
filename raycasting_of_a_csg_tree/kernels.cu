@@ -255,7 +255,7 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 	return true;
 }
 
-__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree, float* dev_intersecion_points,
+__global__ void CalculateInterscetion(int width, int height, size_t sphere_count, Node* dev_tree,
 	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view,
 	Sphere* dev_spheres, Cube* cubes, unsigned char* dev_texture_data, float* light_pos_ptr)
 {
@@ -653,7 +653,7 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree,
-	float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres, Cube* dev_cubes)
+	float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres, Cube* dev_cubes)
 {
 	dim3 block(16, 16);
 	dim3 grid((width + block.x - 1) / block.x, (height + block.y - 1) / block.y);
@@ -661,7 +661,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 
 	auto start2 = std::chrono::high_resolution_clock::now();
 	dim3 grid2(width, height);
-	CalculateInterscetion << <grid, block >> > (width, height, sphere_count, dev_tree, dev_intersecion_points, dev_intersection_result,
+	CalculateInterscetion << <grid, block >> > (width, height, sphere_count, dev_tree, dev_intersection_result,
 		dev_parts, camera_pos, projection, view, dev_spheres, dev_cubes, dev_texture_data, light_pos);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
@@ -676,7 +676,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 
 
 	auto start3 = std::chrono::high_resolution_clock::now();
-	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersecion_points, dev_intersection_result, dev_spheres);
+	ColorPixel << <grid, block >> > (dev_texture_data, width, height, sphere_count, projection, view, camera_pos, light_pos, dev_tree, dev_intersection_result, dev_spheres);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("ColorPixel launch error: %s\n", cudaGetErrorString(err));
@@ -692,7 +692,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 }
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, size_t sphere_count,
-	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersecion_points, float* dev_intersection_result, Sphere* dev_spheres)
+	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersection_result, Sphere* dev_spheres)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;

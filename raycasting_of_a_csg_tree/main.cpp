@@ -20,35 +20,18 @@
 #include "DevStruct.h"
 #include "Tree.h"
 #include "TreeParser.h"
-
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-float GetTimePassed(float& last);
-
-
 #include "kernels.cuh"
+#include "GPUdata.h"
+
+float GetTimePassed(float& last);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+
+GPUdata MallocCopyDataToGPU(TreeParser parser);
+void FreeMemory(GPUdata data);
 
 Scene scene;
-
-
-// Main function
 int main() {
 
-	
-
-	Window window(SCR_WIDTH, SCR_HEIGHT);
-
-	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
-
-
-	scene = Scene();
-	scene.SetCamera(Camera(vec3(0, 0, -8)));
-	scene.SetLight(Light(vec3(0, 0, -4), vec3(1, 1, 1)));
-
-	window.RegisterTexture(scene.GetTexture());
-
-
-	
 	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
 	if (parser.Parse())
 	{
@@ -59,96 +42,21 @@ int main() {
 		cout << "Parsing failed" << endl;
 		return -1;
 	}
+
+	Window window(SCR_WIDTH, SCR_HEIGHT);
+
+	scene=Scene();
+	scene.SetCamera(Camera(vec3(0, 0, -8)));
+	scene.SetLight(Light(vec3(0, 0, -4), vec3(1, 1, 1)));
+
+	window.RegisterTexture(scene.GetTexture());
 	
-	int SPHERE_COUNT = parser.num_spheres;
-	int CUBES_COUNT = parser.num_cubes;
-	int CYLINDER_COUNT = parser.num_cylinders;
-	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT+CYLINDER_COUNT;
-	int NODE_COUNT = 2 * SHAPE_COUNT - 1;
+	glfwSetScrollCallback(window.GetWindow(), scroll_callback);
 
 
-	//copy sphere and texture to gpu
-	unsigned char* dev_texture_data;
-	float* dev_projection;
-	float* dev_view;
-	float* dev_camera_position;
-	float* dev_light_postion;
-	Node* dev_tree;
-	int* dev_parts;
-	Sphere* dev_spheres;
-	Cube* dev_cubes;
-	Cylinder* dev_cylinders;
+	GPUdata gpuData = MallocCopyDataToGPU(parser);
 
-	float* dev_intersecion_points;
-	float* dev_intersection_result;
-
-	Sphere* spheres = parser.spheres.data();
-	Cube* cubes = parser.cubes.data();
-	Cylinder* cylinders = parser.cylinders.data();
-
-	cudaError_t err;
-
-	err = cudaMalloc(&dev_spheres, MAX_SHAPES * sizeof(Sphere));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_spheres error: %s\n", cudaGetErrorString(err));
-	}
-
-	err = cudaMalloc(&dev_cubes, MAX_SHAPES * sizeof(Cube));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_cubes error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_cylinders, MAX_SHAPES * sizeof(Cylinder));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_cylinders error: %s\n", cudaGetErrorString(err));
-	}
-
-	parser.AttachShapes(dev_cubes, dev_spheres, dev_cylinders);
-
-	err = cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_projection, 16 * sizeof(float));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_view, 16 * sizeof(float));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_camera_position, 3 * sizeof(float));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_light_postion, 3 * sizeof(float));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_intersecion_points, TEXTURE_WIDHT * TEXTURE_HEIGHT * SHAPE_COUNT * 2 * sizeof(float));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_intersection_result, TEXTURE_WIDHT * TEXTURE_HEIGHT * sizeof(float));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-	err = cudaMalloc(&dev_parts, 4*(SHAPE_COUNT - 1) * sizeof(int));
-	if (err != cudaSuccess) {
-		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
-	}
-
-	printf("parser parts %d\n", parser.parts[0]);
-
-	cudaMemcpy(dev_tree, parser.nodes.data(), NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_parts, parser.parts, 4*(SHAPE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_spheres, spheres, MAX_SHAPES * sizeof(Sphere), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_cubes, cubes, MAX_SHAPES * sizeof(Cube), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_cylinders, cylinders, MAX_SHAPES * sizeof(Cylinder), cudaMemcpyHostToDevice);
+	
 
 	int cam_direction = 1;
 	float last = glfwGetTime();
@@ -183,15 +91,14 @@ int main() {
 				cam_direction = 1;
 			}
 		}
-		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
-		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion,
-			SHAPE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres, dev_cubes);
+		scene.UpdateTextureGpu(gpuData.dev_texture_data, gpuData.dev_projection, gpuData.dev_view, gpuData.dev_camera_position, gpuData.dev_light_postion,
+			parser.ShapeCount, gpuData.dev_tree, gpuData.dev_intersection_result, gpuData.dev_parts, gpuData.dev_spheres, gpuData.dev_cubes);
 		
 
 		// copy texture to cpu
-		cudaMemcpy(scene.GetTexture().data.data(), dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+		cudaMemcpy(scene.GetTexture().data.data(), gpuData.dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
 		// copy to opengl
 		glBindTexture(GL_TEXTURE_2D, scene.GetTexture().id);
@@ -203,15 +110,105 @@ int main() {
 		
 	}
 
-	cudaFree(dev_spheres);
-	cudaFree(dev_texture_data);
-	cudaFree(dev_projection);
-	cudaFree(dev_view);
-	cudaFree(dev_camera_position);
-	cudaFree(dev_light_postion);
+	FreeMemory(gpuData);
 
 	return 0;
 }
+
+
+GPUdata MallocCopyDataToGPU(TreeParser parser)
+{
+	GPUdata data;
+
+	int SPHERE_COUNT = parser.num_spheres;
+	int CUBES_COUNT = parser.num_cubes;
+	int CYLINDER_COUNT = parser.num_cylinders;
+	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT + CYLINDER_COUNT;
+	int NODE_COUNT = 2 * SHAPE_COUNT - 1;
+
+	Sphere* spheres = parser.spheres.data();
+	Cube* cubes = parser.cubes.data();
+	Cylinder* cylinders = parser.cylinders.data();
+
+	cudaError_t err;
+
+	err = cudaMalloc(&data.dev_spheres, MAX_SHAPES * sizeof(Sphere));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_spheres error: %s\n", cudaGetErrorString(err));
+	}
+
+	err = cudaMalloc(&data.dev_cubes, MAX_SHAPES * sizeof(Cube));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_cubes error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&data.dev_cylinders, MAX_SHAPES * sizeof(Cylinder));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_cylinders error: %s\n", cudaGetErrorString(err));
+	}
+
+	parser.AttachShapes(data.dev_cubes, data.dev_spheres, data.dev_cylinders);
+
+	err = cudaMalloc(&data.dev_tree, NODE_COUNT * sizeof(Node));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&data.dev_projection, 16 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&data.dev_view, 16 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&data.dev_camera_position, 3 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&data.dev_light_postion, 3 * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&data.dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+
+	err = cudaMalloc(&data.dev_intersection_result, TEXTURE_WIDHT * TEXTURE_HEIGHT * sizeof(float));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+	err = cudaMalloc(&data.dev_parts, 4 * (SHAPE_COUNT - 1) * sizeof(int));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
+	}
+
+	printf("parser parts %d\n", parser.parts[0]);
+
+	cudaMemcpy(data.dev_tree, parser.nodes.data(), NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_parts, parser.parts, 4 * (SHAPE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_spheres, spheres, MAX_SHAPES * sizeof(Sphere), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_cubes, cubes, MAX_SHAPES * sizeof(Cube), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_cylinders, cylinders, MAX_SHAPES * sizeof(Cylinder), cudaMemcpyHostToDevice);
+
+	return data;
+}
+
+void FreeMemory(GPUdata data)
+{
+	cudaFree(data.dev_spheres);
+	cudaFree(data.dev_texture_data);
+	cudaFree(data.dev_projection);
+	cudaFree(data.dev_view);
+	cudaFree(data.dev_camera_position);
+	cudaFree(data.dev_light_postion);
+	cudaFree(data.dev_tree);
+	cudaFree(data.dev_intersection_result);
+	cudaFree(data.dev_parts);
+	cudaFree(data.dev_cubes);
+	cudaFree(data.dev_cylinders);
+}
+
 float GetTimePassed(float& last) {
 	auto time = glfwGetTime();
 	float dt = time - last;
