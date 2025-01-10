@@ -36,8 +36,10 @@ public:
 	Scene();
 	void SetCamera(Camera camera);
 	void SetLight(Light light);
+	void SetLightPosition(vec3 light_pos);
 
 	Camera& GetCamera() { return camera; }
+	Light& GetLight() { return light; }
 	Texture& GetTexture() { return texture; }
 
 	void UpdateTextureGpu(unsigned char* dev_tecture_data, float* dev_projection, float* dev_view, 

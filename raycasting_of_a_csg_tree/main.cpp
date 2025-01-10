@@ -192,13 +192,13 @@ int main() {
 
 		float r = 100000.0f;
 
-		if (scene.GetCamera().rotateLight)
+		if (scene.GetLight().rotateLight)
 		{
-			scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
+			scene.SetLightPosition(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())));
 		}
 		else
 		{
-			scene.SetLight(Light(vec3(r* cos(scene.angle), 0, r* sin(scene.angle)), vec3(1, 1, 1)));
+			scene.SetLightPosition(vec3(r* cos(scene.angle), 0, r* sin(scene.angle)));
 		}
 		
 		

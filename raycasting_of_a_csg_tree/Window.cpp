@@ -135,7 +135,7 @@ void Window::Render(Scene& scene)
 	ImGui::SliderFloat("Light angle", &scene.angle, -2 * 3.14159265, 2 * 3.14159265);
 	ImGui::Checkbox("Travel on Scene", &scene.GetCamera().rotateScene);
 	ImGui::Checkbox("Rotate Scene", &scene.GetCamera().animation);
-	ImGui::Checkbox("Rotate Light", &scene.GetCamera().rotateLight);
+	ImGui::Checkbox("Rotate Light", &scene.GetLight().rotateLight);
 	ImGui::End();
 
 

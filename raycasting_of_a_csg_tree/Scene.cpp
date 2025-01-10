@@ -61,3 +61,7 @@ void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, float* dev_project
 		dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres, dev_cubes);
 }
 
+void Scene::SetLightPosition(vec3 light_pos)
+{
+	light.position = light_pos;
+}

@@ -22,7 +22,7 @@ public:
 	bool animation = true;
 	bool rotateScene = true;
 	bool setCameraToCenter = false;
-	bool rotateLight = false;
+	
 
 	float speed = 10.0f;
 
