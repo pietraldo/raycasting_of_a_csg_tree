@@ -18,6 +18,34 @@ Scene::Scene()
 	texture = Texture(3, TEXTURE_WIDHT, TEXTURE_HEIGHT, 0);
 }
 
+void Scene::Update()
+{
+	float r = 100000.0f;
+
+	if (light.rotateLight)
+	{
+		SetLightPosition(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())));
+	}
+	else
+	{
+		SetLightPosition(vec3(r * cos(angle), 0, r * sin(angle)));
+	}
+
+
+	if (camera.animation)
+	{
+		camera.yaw += 0.25;
+		camera.pitch += camera.cameraDirection * 0.05;
+		if (camera.pitch > 20)
+		{
+			camera.cameraDirection = -1;
+		}
+		if (camera.pitch < -20)
+		{
+			camera.cameraDirection = 1;
+		}
+	}
+}
 
 void Texture::SetPixel(int x, int y, glm::vec3 color)
 {
@@ -27,8 +55,7 @@ void Texture::SetPixel(int x, int y, glm::vec3 color)
 	data[index + 2] = color.b;
 }
 
-void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, float* dev_projection, float* dev_view, float* dev_camera_position, float* dev_light_position, int sphere_count,
-	Node* dev_tree,float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres, Cube* dev_cubes)
+void Scene::UpdateTextureGpu(GPUdata& data)
 {
 
 	// Matrix that transforms from camera space to screen space
@@ -52,12 +79,13 @@ void Scene::UpdateTextureGpu(unsigned char* dev_texture_data, float* dev_project
 	float camera_position[3] = {camera.position.x, camera.position.y, camera.position.z};
 	float light_position[3] = { light.position.x, light.position.y, light.position.z };
 
-	cudaMemcpy(dev_projection, projection2, 16 * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_view, view2, 16 * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_camera_position, camera_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_light_position, light_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_projection, projection2, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_view, view2, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_camera_position, camera_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(data.dev_light_postion, light_position, 3 * sizeof(float), cudaMemcpyHostToDevice);
 
-	UpdateOnGPU(dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, sphere_count, dev_projection, dev_view, dev_camera_position, dev_light_position, dev_tree, dev_intersection_result, dev_parts, dev_spheres, dev_cubes);
+	UpdateOnGPU(data.dev_texture_data, TEXTURE_WIDHT, TEXTURE_HEIGHT, data.ShapeCount, data.dev_projection, 
+		data.dev_view, data.dev_camera_position, data.dev_light_postion, data.dev_tree, data.dev_intersection_result, data.dev_parts, data.dev_spheres, data.dev_cubes);
 }
 
 void Scene::SetLightPosition(vec3 light_pos)

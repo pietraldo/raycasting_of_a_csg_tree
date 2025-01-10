@@ -23,6 +23,7 @@ public:
 	bool rotateScene = true;
 	bool setCameraToCenter = false;
 	
+	int cameraDirection = 1; // 1 - up, -1 - down
 
 	float speed = 10.0f;
 

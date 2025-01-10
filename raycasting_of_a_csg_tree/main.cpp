@@ -56,9 +56,6 @@ int main() {
 
 	GPUdata gpuData = MallocCopyDataToGPU(parser);
 
-	
-
-	int cam_direction = 1;
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
 
@@ -66,35 +63,9 @@ int main() {
 
 		window.ProccessInput(scene, dt);
 
-		float r = 100000.0f;
+		scene.Update();
 
-		if (scene.GetLight().rotateLight)
-		{
-			scene.SetLightPosition(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())));
-		}
-		else
-		{
-			scene.SetLightPosition(vec3(r* cos(scene.angle), 0, r* sin(scene.angle)));
-		}
-		
-		
-		if (scene.GetCamera().animation)
-		{
-			scene.GetCamera().yaw += 0.25;
-			scene.GetCamera().pitch += cam_direction * 0.05;
-			if (scene.GetCamera().pitch > 20)
-			{
-				cam_direction = -1;
-			}
-			if (scene.GetCamera().pitch < -20)
-			{
-				cam_direction = 1;
-			}
-		}
-
-
-		scene.UpdateTextureGpu(gpuData.dev_texture_data, gpuData.dev_projection, gpuData.dev_view, gpuData.dev_camera_position, gpuData.dev_light_postion,
-			parser.ShapeCount, gpuData.dev_tree, gpuData.dev_intersection_result, gpuData.dev_parts, gpuData.dev_spheres, gpuData.dev_cubes);
+		scene.UpdateTextureGpu(gpuData);
 		
 
 		// copy texture to cpu
@@ -125,6 +96,8 @@ GPUdata MallocCopyDataToGPU(TreeParser parser)
 	int CYLINDER_COUNT = parser.num_cylinders;
 	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT + CYLINDER_COUNT;
 	int NODE_COUNT = 2 * SHAPE_COUNT - 1;
+
+	data.ShapeCount = SHAPE_COUNT;
 
 	Sphere* spheres = parser.spheres.data();
 	Cube* cubes = parser.cubes.data();

@@ -18,6 +18,7 @@
 #include "Texture.h"
 #include "kernels.cuh"
 #include "Tree.h"
+#include "GPUdata.h"
 
 using namespace glm;
 using namespace std;
@@ -42,10 +43,9 @@ public:
 	Light& GetLight() { return light; }
 	Texture& GetTexture() { return texture; }
 
-	void UpdateTextureGpu(unsigned char* dev_tecture_data, float* dev_projection, float* dev_view, 
-		float* dev_camera_position, float* dev_light_position, int sphere_count, 
-		Node* dev_tree, float* dev_intersection_result, 
-		int* dev_parts,  Sphere* dev_spheres, Cube* dev_cubes);
+	void Update();
+
+	void UpdateTextureGpu(GPUdata& data);
 };
 
 

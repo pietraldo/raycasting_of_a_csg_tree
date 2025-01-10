@@ -15,4 +15,5 @@ struct GPUdata
 	Cube* dev_cubes;
 	Cylinder* dev_cylinders;
 	float* dev_intersection_result;
+	int ShapeCount;
 };
