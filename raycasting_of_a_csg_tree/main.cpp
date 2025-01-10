@@ -82,7 +82,7 @@ int main() {
 
 
 	
-	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/raycasting_of_a_csg_tree/example_models/csg_model1.txt");
+	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
 	parser.Parse();
 	
 	int SPHERE_COUNT = parser.num_spheres;
