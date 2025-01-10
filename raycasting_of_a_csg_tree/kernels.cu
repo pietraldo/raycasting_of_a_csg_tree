@@ -118,6 +118,34 @@ __host__ __device__ bool IntersectionPointCube(const Cube& cube, const float3& r
 	return t_close < t_far;
 }
 
+__host__ __device__ float3 CalculateNormalVectorCylinder(const Cylinder& cylinder, float3 pixelPosition)
+{
+	float3 a = NormalizeVector3(cylinder.axis);
+
+	float3 v = make_float3(
+		pixelPosition.x,
+		pixelPosition.y,
+		pixelPosition.z
+	);
+
+	// Project v onto the axis to find the closest point on the axis
+	float projection_length = v.x * a.x + v.y * a.y + v.z * a.z;
+	float3 projection2 = make_float3(
+		a.x * projection_length,
+		a.y * projection_length,
+		a.z * projection_length
+	);
+
+	// Compute the vector from the projected point to the surface point
+	float3 normal = make_float3(
+		v.x - projection2.x,
+		v.y - projection2.y,
+		v.z - projection2.z
+	);
+
+	return NormalizeVector3(normal);
+}
+
 __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
 {
 	float3 b = make_float3(cylinder.position.x - rayOrigin.x, cylinder.position.y - rayOrigin.y, cylinder.position.z - rayOrigin.z);
@@ -147,11 +175,11 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 	float d3 = dot3(a, c2) / dot3(a, n);
 	float d4 = dot3(a, c1) / dot3(a, n);
 
-	if (!(dot3(make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z), make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z)) < r * r))
+	if (!(d3>0&&dot3(make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z), make_float3(n.x * d3 - c2.x, n.y * d3 - c2.y, n.z * d3 - c2.z)) < r * r))
 	{
 		d3 = 1000;
 	}
-	if (!(dot3(make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z), make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z)) < r * r))
+	if (!(d4>0 && dot3(make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z), make_float3(n.x * d4 - c1.x, n.y * d4 - c1.y, n.z * d4 - c1.z)) < r * r))
 	{
 		d4 = 1000;
 	}
@@ -164,70 +192,49 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 		d2 = 1000;
 	}
 
-	if (d1 < d2 && d1 < d3 && d1 < d4)
+	
+
+	t1 = 1000;
+	t2 = 1000;
+
+	if (d1 != 1000)
 	{
 		t1 = d1;
-		if (d2 < d3 && d2 < d4)
+	}
+	if (d2 != 1000)
+	{
+		t2 = d2;
+	}
+	if (d3 != 1000)
+	{
+		if (t1 == 1000)
 		{
-			t2 = d2;
+			t1 = d3;
 		}
-		else if (d3 < d4)
+		else
 		{
-			t2 = d3;
+			t2 =d3;
+		}
+	}
+	if (d4 != 1000)
+	{
+		if (t1 == 1000)
+		{
+			t1 = d4;
 		}
 		else
 		{
 			t2 = d4;
 		}
 	}
-	else if (d2 < d3 && d2 < d4)
+
+	if (t1 > t2)
 	{
-		t1 = d2;
-		if (d1 < d3 && d1 < d4)
-		{
-			t2 = d1;
-		}
-		else if (d3 < d4)
-		{
-			t2 = d3;
-		}
-		else
-		{
-			t2 = d4;
-		}
+		float temp = t1;
+		t1 = t2;
+		t2 = temp;
 	}
-	else if (d3 < d4)
-	{
-		t1 = d3;
-		if (d1 < d2 && d1 < d4)
-		{
-			t2 = d1;
-		}
-		else if (d2 < d4)
-		{
-			t2 = d2;
-		}
-		else
-		{
-			t2 = d4;
-		}
-	}
-	else
-	{
-		t1 = d4;
-		if (d1 < d2 && d1 < d3)
-		{
-			t2 = d1;
-		}
-		else if (d2 < d3)
-		{
-			t2 = d2;
-		}
-		else
-		{
-			t2 = d3;
-		}
-	}
+
 
 	return true;
 }
@@ -275,9 +282,9 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 
 
 	Cylinder cylinder{1,3,make_float3(0,0,0), make_float3(0,1,1), make_int3(255,255,0)};
-	IntersectionPointCylinder(cylinder, camera_pos, ray, t1, t2, make_float3(0, 0, 0), make_float3(0, 0, 0));
+	if (!IntersectionPointCylinder(cylinder, camera_pos, ray, t1, t2, make_float3(0, 0, 0), make_float3(0, 0, 0)))
+		t1 = 1000;
 
-	//printf("%f %f\n", t1, t2);
 	dev_intersection_result[x + y * width] = t1;
 	return;
 
@@ -619,55 +626,6 @@ __global__ void CalculateInterscetion(int width, int height, size_t sphere_count
 }
 
 
-__global__ void RayWithSphereIntersectionPoints(int width, int height, size_t sphere_count,
-	float* projection, float* view, float* camera_pos_ptr, Node* dev_tree, float* dev_intersecion_points)
-{
-	return;
-	/*int x = threadIdx.x + blockIdx.x * blockDim.x;
-	int y = threadIdx.y + blockIdx.y * blockDim.y;
-
-	if (x >= width || y >= height)
-		return;
-
-	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
-
-	float stepX = 2 / (float)width;
-	float stepY = 2 / (float)height;
-
-	float3 ray = make_float3(-1 + x * stepX, -1 + y * stepY, 1.0f);
-	float4 target = make_float4(ray.x, ray.y, ray.z, 1.0f);
-
-	MultiplyVectorByMatrix4(target, projection);
-	target.x /= target.w;
-	target.y /= target.w;
-	target.z /= target.w;
-	target.w /= target.w;
-
-	target = NormalizeVector4(target);
-	target.w = 0.0f;
-
-	MultiplyVectorByMatrix4(target, view);
-
-	ray.x = target.x;
-	ray.y = target.y;
-	ray.z = target.z;
-
-	int index = (x + y * width) * sphere_count * 2;
-	for (int k = sphere_count - 1; k < 2 * sphere_count - 1; k++)
-	{
-		float t1 = -1, t2 = -1;
-
-		float3 spherePosition = make_float3(dev_tree[k].x, dev_tree[k].y, dev_tree[k].z);
-		float radius = dev_tree[k].radius;
-		IntersectionPoint(spherePosition, radius, camera_pos, ray, t1, t2);
-
-		int m = k - sphere_count + 1;
-		dev_intersecion_points[index + 2 * m] = t1;
-		dev_intersecion_points[index + 2 * m + 1] = t2;
-
-	}*/
-}
-
 void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 	size_t sphere_count, float* projection, float* view, float* camera_pos, float* light_pos, Node* dev_tree,
 	float* dev_intersecion_points, float* dev_intersection_result, int* dev_parts, Sphere* dev_spheres, Cube* dev_cubes)
@@ -720,7 +678,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float t = dev_intersection_result[x + y * width];
 
-	if (t == 1000 || t<0)
+	if (t == 1000)
 	{
 		int index2 = 3 * (y * width + x);
 		dev_texture_data[index2] = 0;
@@ -813,34 +771,9 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	}
 	
 	//if (!intersection) return;
-	shapeColor = make_int3(255, 0, 0);
-	float3 b = make_float3(0 - camera_pos.x, 0 - camera_pos.y, 0 - camera_pos.z);
-	float3 a = NormalizeVector3(make_float3(0, 1, 1));
-	float r = 1;
-	float h = 3;
-
-	float3 v = make_float3(
-		pixelPosition.x ,
-		pixelPosition.y ,
-		pixelPosition.z 
-	);
-
-	// Project v onto the axis to find the closest point on the axis
-	float projection_length = v.x * a.x + v.y * a.y + v.z * a.z;
-	float3 projection2 = make_float3(
-		a.x * projection_length,
-		a.y * projection_length,
-		a.z * projection_length
-	);
-
-	// Compute the vector from the projected point to the surface point
-	float3 normal = make_float3(
-		v.x - projection2.x,
-		v.y - projection2.y,
-		v.z - projection2.z
-	);
-
-	N = NormalizeVector3(normal);
+	shapeColor = make_int3(255, 255, 0);
+	Cylinder cylinder{ 1,3,make_float3(0,0,0), make_float3(0,1,1), make_int3(255,255,0) };
+	N = CalculateNormalVectorCylinder(cylinder, pixelPosition);
 
 	float3 lightRay = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
 	float3 L = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
