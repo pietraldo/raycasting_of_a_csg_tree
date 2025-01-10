@@ -76,8 +76,9 @@ void Window::ProccessKeys(Scene& scene, float dt)
 void Window::ProccessMouse(Scene& scene, float dt)
 {
 	double mouseX, mouseY;
+	
 	glfwGetCursorPos(window, &mouseX, &mouseY);
-
+	//cout << mouseX << " " << mouseY << endl;
 	if (GLFW_PRESS != glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
 	{
 		lastMouseX = mouseX;

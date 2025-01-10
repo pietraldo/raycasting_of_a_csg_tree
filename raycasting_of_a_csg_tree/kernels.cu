@@ -192,7 +192,8 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 		d2 = 1000;
 	}
 
-
+	if (d1 == 1000 && d2 == 1000 && d3==1000 && d4==1000)
+		return false;
 
 	t1 = 1000;
 	t2 = 1000;
@@ -248,6 +249,7 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 		N2 = make_float3(-N2.x, -N2.y, -N2.z);
 		
 	}
+	
 	
 
 	return true;
@@ -685,7 +687,7 @@ void UpdateOnGPU(unsigned char* dev_texture_data, int width, int height,
 
 	//printf("ColorPixel time: %f\n", elapsed3.count());
 
-	printf("%f %f \n", elapsed2.count(), elapsed3.count());
+	//printf("%f %f \n", elapsed2.count(), elapsed3.count());
 
 }
 
@@ -738,6 +740,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
 	float3 N;
+
 
 	bool intersection = false;
 	int index = (x + y * width) * sphere_count * 2;

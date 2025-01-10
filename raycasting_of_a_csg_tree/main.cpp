@@ -182,6 +182,7 @@ int main() {
 	cudaMemcpy(dev_cubes, cubes, MAX_SHAPES * sizeof(Cube), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_cylinders, cylinders, MAX_SHAPES * sizeof(Cylinder), cudaMemcpyHostToDevice);
 
+	int cam_direction = 1;
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
 
@@ -191,6 +192,17 @@ int main() {
 
 		float r = 100000.0f;
 		scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
+		scene.GetCamera().yaw += 0.25;
+
+		scene.GetCamera().pitch +=cam_direction* 0.05;
+		if (scene.GetCamera().pitch > 90)
+		{
+			cam_direction = -1;
+		}
+		if (scene.GetCamera().pitch < -90)
+		{
+			cam_direction = 1;
+		}
 		//scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
 		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
