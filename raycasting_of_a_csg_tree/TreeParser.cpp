@@ -114,12 +114,14 @@ bool TreeParser::Parse()
 		{
 			if (root != -1)
 			{
+				printf("root: %d\n", root);
 				cout << "Multiple roots found" << endl;
 				return false;
 			}
 			else
 			{
 				root = i;
+				printf("root: %d\n", root);
 			}
 		}
 	}
