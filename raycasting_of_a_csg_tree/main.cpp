@@ -82,7 +82,7 @@ int main() {
 
 
 	
-	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
+	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/raycasting_of_a_csg_tree/example_models/csg_model1.txt");
 	parser.Parse();
 	
 	int SPHERE_COUNT = parser.num_spheres;
@@ -95,10 +95,6 @@ int main() {
 	int* parts= new int[4 * (SHAPE_COUNT - 1)];
 	CreateParts(parts, parser.nodes, 0, true, SHAPE_COUNT);
 
-	for (int i = 0; i < 4 * (SHAPE_COUNT - 1); i++)
-	{
-		std::cout << parts[i] << " ";
-	}
 
 	//copy sphere and texture to gpu
 	unsigned char* dev_texture_data;

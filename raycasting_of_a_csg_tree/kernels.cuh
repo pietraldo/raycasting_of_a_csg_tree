@@ -35,13 +35,6 @@ __host__ __device__ float4 NormalizeVector4(float4 vector);
 
 __host__ __device__ float3 NormalizeVector3(float3 vector);
 
-__host__ __device__ bool SphereSubstraction(bool a, bool b);
-
-__host__ __device__ bool SphereIntersection(bool a, bool b);
-
-__host__ __device__ bool SphereUnion(bool a, bool b);
-
-__host__ __device__ bool SphereContains(float sx, float sy, float sz, float sr, float x, float y, float z);
 
 __host__ __device__ float3 cross(const float3& a, const float3& b);
 

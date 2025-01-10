@@ -916,23 +916,3 @@ __host__ __device__ float3 cross(const float3& a, const float3& b)
 	return result;
 }
 
-
-__host__ __device__ bool SphereSubstraction(bool a, bool b)
-{
-	return a && !b;
-}
-
-__host__ __device__ bool SphereIntersection(bool a, bool b)
-{
-	return a && b;
-}
-
-__host__ __device__ bool SphereUnion(bool a, bool b)
-{
-	return a || b;
-}
-
-__host__ __device__ bool SphereContains(float sx, float sy, float sz, float sr, float x, float y, float z)
-{
-	return (x - sx) * (x - sx) + (y - sy) * (y - sy) + (z - sz) * (z - sz) < sr * sr;
-}
