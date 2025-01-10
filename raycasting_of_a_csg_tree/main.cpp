@@ -87,7 +87,8 @@ int main() {
 	
 	int SPHERE_COUNT = parser.num_spheres;
 	int CUBES_COUNT = parser.num_cubes;
-	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT;
+	int CYLINDER_COUNT = parser.num_cylinders;
+	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT+CYLINDER_COUNT;
 	int NODE_COUNT = 2 * SHAPE_COUNT - 1;
 
 
@@ -109,12 +110,14 @@ int main() {
 	int* dev_parts;
 	Sphere* dev_spheres;
 	Cube* dev_cubes;
+	Cylinder* dev_cylinders;
 
 	float* dev_intersecion_points;
 	float* dev_intersection_result;
 
 	Sphere* spheres = parser.spheres.data();
 	Cube* cubes = parser.cubes.data();
+	Cylinder* cylinders = parser.cylinders.data();
 
 	cudaError_t err;
 
@@ -127,8 +130,12 @@ int main() {
 	if (err != cudaSuccess) {
 		printf("cudaMalloc dev_cubes error: %s\n", cudaGetErrorString(err));
 	}
+	err = cudaMalloc(&dev_cylinders, MAX_SHAPES * sizeof(Cylinder));
+	if (err != cudaSuccess) {
+		printf("cudaMalloc dev_cylinders error: %s\n", cudaGetErrorString(err));
+	}
 
-	parser.AttachShapes(dev_cubes, dev_spheres);
+	parser.AttachShapes(dev_cubes, dev_spheres, dev_cylinders);
 
 	err = cudaMalloc(&dev_tree, NODE_COUNT * sizeof(Node));
 	if (err != cudaSuccess) {
@@ -173,6 +180,7 @@ int main() {
 	cudaMemcpy(dev_parts, parts, 4*(SHAPE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_spheres, spheres, MAX_SHAPES * sizeof(Sphere), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_cubes, cubes, MAX_SHAPES * sizeof(Cube), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_cylinders, cylinders, MAX_SHAPES * sizeof(Cylinder), cudaMemcpyHostToDevice);
 
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {

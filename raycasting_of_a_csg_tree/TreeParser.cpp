@@ -67,7 +67,16 @@ bool TreeParser::CreateObjects()
 				spheres[index] = Sphere{ entry.radius, make_float3(entry.x,entry.y,entry.z), make_int3(entry.r,entry.g,entry.b) };
 				num_spheres++;
 			}
+			else if (line[0] == 'w')
+			{
+				istringstream iss(line);
+				ParseCylinder entry;
 
+				iss >> entry.index >> entry.x >> entry.y >> entry.z >> entry.radius >> entry.height >> entry.axis_x >> entry.axis_y >> entry.axis_z >> entry.r >> entry.g >> entry.b;
+				int index = stoi(entry.index.substr(1, entry.index.find(')')));
+				cylinders[index] = Cylinder{ entry.radius, entry.height, make_float3(entry.x,entry.y,entry.z), make_float3(entry.axis_x,entry.axis_y,entry.axis_z), make_int3(entry.r,entry.g,entry.b) };
+				num_cylinders++;
+			}
 		}
 		catch (...)
 		{
@@ -75,7 +84,7 @@ bool TreeParser::CreateObjects()
 			return false;
 		}
 	}
-	return num_spheres + num_cubes == num_nodes + 1;
+	return num_spheres + num_cubes +num_cylinders== num_nodes + 1;
 }
 
 bool TreeParser::Parse()
@@ -193,13 +202,13 @@ bool TreeParser::Parse()
 
 
 
-			node = Node{ left, right, -1, -1, nullptr, nullptr, parseNode.operation[0] };
+			node = Node{ left, right, -1, -1, nullptr, nullptr,nullptr, parseNode.operation[0] };
 
 		}
 		else
 		{
 			int shapeIdx = indexes[i][0] == 's' ? 1 : 2;
-			node = Node{ -1, -1, -1, shapeIdx, nullptr, nullptr, 0 };
+			node = Node{ -1, -1, -1, shapeIdx, nullptr, nullptr,nullptr, 0 };
 		}
 		nodes.push_back(node);
 	}
@@ -217,21 +226,24 @@ bool TreeParser::Parse()
 	return true;
 }
 
-void TreeParser::AttachShapes(Cube* dev_cubes, Sphere* dev_spheres)
+void TreeParser::AttachShapes(Cube* dev_cubes, Sphere* dev_spheres, Cylinder* dev_cylinders)
 {
 	for (int i = 0; i < leavesIndexes.size(); i++)
 	{
 		if (leavesIndexes[i][0] == 's')
 		{
-			printf("%d: %d\n", i + num_spheres + num_cubes - 1, stoi(leavesIndexes[i].substr(1)));
-			nodes[i + num_spheres + num_cubes - 1].sphere = &dev_spheres[stoi(leavesIndexes[i].substr(1))];
-			nodes[i + num_spheres + num_cubes - 1].shape = 1;
+			nodes[i + num_spheres + num_cubes +num_cylinders- 1].sphere = &dev_spheres[stoi(leavesIndexes[i].substr(1))];
+			nodes[i + num_spheres + num_cubes + num_cylinders - 1].shape = 1;
+		}
+		else if (leavesIndexes[i][0] == 'w')
+		{
+			nodes[i + num_spheres + num_cubes + num_cylinders - 1].cylinder = &dev_cylinders[stoi(leavesIndexes[i].substr(1))];
+			nodes[i + num_spheres + num_cubes + num_cylinders - 1].shape = 3;
 		}
 		else
 		{
-			printf("%d: %d\n", i + num_spheres + num_cubes - 1, stoi(leavesIndexes[i].substr(1)));
-			nodes[i + num_spheres + num_cubes - 1].cube = &dev_cubes[stoi(leavesIndexes[i].substr(1))];
-			nodes[i + num_spheres + num_cubes - 1].shape = 2;
+			nodes[i + num_spheres + num_cubes + num_cylinders - 1].cube = &dev_cubes[stoi(leavesIndexes[i].substr(1))];
+			nodes[i + num_spheres + num_cubes + num_cylinders - 1].shape = 2;
 		}
 	}
 }
