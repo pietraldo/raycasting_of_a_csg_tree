@@ -4,7 +4,6 @@
 #include <cuda_runtime.h>
 
 #include <iostream>
-#include "math.cuh"
 #include "Tree.h"
 #include "GPUdata.h"
 

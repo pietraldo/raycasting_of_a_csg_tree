@@ -17,7 +17,6 @@
 #include "Camera.h"
 #include "Constants.h"
 #include "Window.h"
-#include "DevStruct.h"
 #include "Tree.h"
 #include "TreeParser.h"
 #include "kernels.cuh"
