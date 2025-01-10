@@ -131,16 +131,11 @@ void Window::Render(Scene& scene)
 	ImGui::End();
 	ImGui::PopStyleVar();
 
-	ImGui::Begin("Debug Info");
-	ImGui::Text("Camera Position: %f %f %f", scene.GetCamera().position.x, scene.GetCamera().position.y, scene.GetCamera().position.z);
-	ImGui::Text("Camera Direction: %f %f %f", scene.GetCamera().direction.x, scene.GetCamera().direction.y, scene.GetCamera().direction.z);
-	ImGui::Text("Camera Yaw: %f", scene.GetCamera().yaw);
-	ImGui::Text("Camera Pitch: %f", scene.GetCamera().pitch);
-	ImGui::Text("Fps: %f", ImGui::GetIO().Framerate);
-	ImGui::SliderFloat("Angle", &scene.angle, 0, 2 * 3.14159265);
-	ImGui::SliderFloat("Angle Right", &scene.GetCamera().yaw, 0, 360);
-	ImGui::SliderFloat("Angle Up", &scene.GetCamera().pitch, 0, 360);
-	ImGui::Checkbox("Rotate Scene", &scene.GetCamera().rotateScene);
+	ImGui::Begin("Scene settings");
+	ImGui::SliderFloat("Light angle", &scene.angle, -2 * 3.14159265, 2 * 3.14159265);
+	ImGui::Checkbox("Travel on Scene", &scene.GetCamera().rotateScene);
+	ImGui::Checkbox("Rotate Scene", &scene.GetCamera().animation);
+	ImGui::Checkbox("Rotate Light", &scene.GetCamera().rotateLight);
 	ImGui::End();
 
 

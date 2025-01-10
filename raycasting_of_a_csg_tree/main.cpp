@@ -191,25 +191,36 @@ int main() {
 		window.ProccessInput(scene, dt);
 
 		float r = 100000.0f;
-		scene.SetLight(Light(vec3(r * cos(scene.angle), 0, r * sin(scene.angle)), vec3(1, 1, 1)));
-		scene.GetCamera().yaw += 0.25;
 
-		scene.GetCamera().pitch +=cam_direction* 0.05;
-		if (scene.GetCamera().pitch > 90)
+		if (scene.GetCamera().rotateLight)
 		{
-			cam_direction = -1;
+			scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
 		}
-		if (scene.GetCamera().pitch < -90)
+		else
 		{
-			cam_direction = 1;
+			scene.SetLight(Light(vec3(r* cos(scene.angle), 0, r* sin(scene.angle)), vec3(1, 1, 1)));
 		}
-		//scene.SetLight(Light(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())), vec3(1, 1, 1)));
+		
+		
+		if (scene.GetCamera().animation)
+		{
+			scene.GetCamera().yaw += 0.25;
+			scene.GetCamera().pitch += cam_direction * 0.05;
+			if (scene.GetCamera().pitch > 20)
+			{
+				cam_direction = -1;
+			}
+			if (scene.GetCamera().pitch < -20)
+			{
+				cam_direction = 1;
+			}
+		}
 		//scene.SetLight(Light(scene.GetCamera().position, vec3(1, 1, 1)));
 
 
 		scene.UpdateTextureGpu(dev_texture_data, dev_projection, dev_view, dev_camera_position, dev_light_postion,
 			SHAPE_COUNT, dev_tree, dev_intersecion_points, dev_intersection_result, dev_parts, dev_spheres, dev_cubes);
-		//scene.UpdateTextureCpu(tree);
+		
 
 		// copy texture to cpu
 		cudaMemcpy(scene.GetTexture().data.data(), dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
@@ -221,15 +232,15 @@ int main() {
 		window.ClearScreen();
 		window.Render(scene);
 
-		//_sleep(100000);
+		
 	}
 
-	/*cudaFree(dev_spheres);
+	cudaFree(dev_spheres);
 	cudaFree(dev_texture_data);
 	cudaFree(dev_projection);
 	cudaFree(dev_view);
 	cudaFree(dev_camera_position);
-	cudaFree(dev_light_postion);*/
+	cudaFree(dev_light_postion);
 
 	return 0;
 }

@@ -136,7 +136,7 @@ bool TreeParser::Parse()
 	{
 		string index = stack.top();
 		stack.pop();
-		printf("index: %s\n", index.c_str());
+		
 		if (index[0] != 't')
 		{
 			leavesIndexes.push_back(index);
@@ -158,9 +158,6 @@ bool TreeParser::Parse()
 
 		stack.push(node.right);
 		stack.push(node.left);
-
-		
-
 
 		i++;
 	}
