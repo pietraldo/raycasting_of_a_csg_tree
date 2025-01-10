@@ -67,6 +67,7 @@ bool TreeParser::CreateObjects()
 				spheres[index] = Sphere{ entry.radius, make_float3(entry.x,entry.y,entry.z), make_int3(entry.r,entry.g,entry.b) };
 				num_spheres++;
 			}
+
 		}
 		catch (...)
 		{

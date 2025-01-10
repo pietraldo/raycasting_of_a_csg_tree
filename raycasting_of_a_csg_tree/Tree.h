@@ -30,6 +30,7 @@ struct Node
 	int shape;
 	Sphere* sphere; // shape = 1
 	Cube* cube; // shape = 2
+
 	char operation;
 };
 
