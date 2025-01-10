@@ -84,6 +84,12 @@ bool TreeParser::CreateObjects()
 			return false;
 		}
 	}
+	file.close();
+
+	ShapeCount = num_spheres + num_cubes + num_cylinders;
+
+	parts = new int[4 * (ShapeCount - 1)];
+
 	return num_spheres + num_cubes +num_cylinders== num_nodes + 1;
 }
 
@@ -222,6 +228,8 @@ bool TreeParser::Parse()
 		}
 	}
 
+	CreateParts();
+
 	return true;
 }
 
@@ -245,4 +253,39 @@ void TreeParser::AttachShapes(Cube* dev_cubes, Sphere* dev_spheres, Cylinder* de
 			nodes[i + num_spheres + num_cubes + num_cylinders - 1].shape = 2;
 		}
 	}
+}
+
+
+void TreeParser::CreateParts(int node)
+{
+	int ll, lr, rl, rr;
+	if (nodes[nodes[node].left].left == -1) // is leaf
+	{
+		ll = (nodes[node].left - ShapeCount + 1) * 2;
+		lr = (nodes[node].left - ShapeCount + 1) * 2 + 1;
+	}
+	else
+	{
+		CreateParts(nodes[node].left);
+		ll = parts[nodes[node].left * 4];
+		lr = parts[nodes[node].left * 4 + 3];
+	}
+	if (nodes[nodes[node].right].left == -1) // is leaf
+	{
+		rl = (nodes[node].right - ShapeCount + 1) * 2;
+		rr = (nodes[node].right - ShapeCount + 1) * 2 + 1;
+	}
+	else
+	{
+		CreateParts(nodes[node].right);
+		rl = parts[nodes[node].right * 4];
+		rr = parts[nodes[node].right * 4 + 3];
+	}
+
+
+
+	parts[node * 4] = ll;
+	parts[node * 4 + 1] = lr;
+	parts[node * 4 + 2] = rl;
+	parts[node * 4 + 3] = rr;
 }

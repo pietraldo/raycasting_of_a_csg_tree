@@ -66,21 +66,22 @@ struct ParseNode
 	int index;
 };
 
+// Class that parses the tree from the file
+// Tree is parsed in the way that tree vector will store nodes 
+// in the order that algorythm can later just go and calculate nodes from last to one 
+// root is alway first and leaves are last
 class TreeParser
 {
 	string fileName;
 
-	
-
-	
-
-	
 	bool CreateObjects();
 public:
 	int num_spheres = 0;
 	int num_cubes = 0;
-	int num_nodes = 0;
 	int num_cylinders = 0;
+	int ShapeCount = 0;
+
+	int num_nodes = 0;
 
 	vector<Node> nodes;
 	vector<ParseNode> parse_nodes= vector<ParseNode>();
@@ -88,11 +89,15 @@ public:
 	vector<Cylinder> cylinders = vector<Cylinder>(MAX_SHAPES);
 	vector<Sphere> spheres = vector<Sphere>(MAX_SHAPES);
 	vector<string> leavesIndexes = vector<string>();
+	
+	// helping array that stores foreach node that is not a leaf has start and end of interval of left and right child in the array of parts
+	int* parts; 
 
 	TreeParser(string fileName);
 	
 	
 	void AttachShapes(Cube* dev_cubes, Sphere* dev_spheres, Cylinder* dev_cylinders);
 	bool Parse();
+	void CreateParts(int node = 0);
 };
 

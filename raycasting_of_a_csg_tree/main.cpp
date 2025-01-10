@@ -30,39 +30,6 @@ float GetTimePassed(float& last);
 
 Scene scene;
 
-void CreateParts(int* part,vector<Node>& tree, int node, bool isLeft, const int SphereCount)
-{
-	int ll, lr, rl, rr;
-	if (tree[tree[node].left].left == -1) // is leaf
-	{
-		ll = (tree[node].left - SphereCount+1)*2;
-		lr = (tree[node].left - SphereCount+1)*2+1;
-	}
-	else
-	{
-		CreateParts(part, tree, tree[node].left, true, SphereCount);
-		ll = part[tree[node].left * 4];
-		lr = part[tree[node].left * 4 + 3];
-	}
-	if (tree[tree[node].right].left == -1) // is leaf
-	{
-		rl = (tree[node].right - SphereCount + 1) * 2;
-		rr = (tree[node].right - SphereCount + 1) * 2 + 1;
-	}
-	else
-	{
-		CreateParts(part, tree, tree[node].right, false, SphereCount);
-		rl = part[tree[node].right * 4];
-		rr = part[tree[node].right * 4 + 3];
-	}
-	
-
-
-	part[node * 4] = ll;
-	part[node * 4 + 1] = lr;
-	part[node * 4 + 2] = rl;
-	part[node * 4 + 3] = rr;
-}
 
 // Main function
 int main() {
@@ -83,17 +50,21 @@ int main() {
 
 	
 	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
-	parser.Parse();
+	if (parser.Parse())
+	{
+		cout << "Parsing successful" << endl;
+	}
+	else
+	{
+		cout << "Parsing failed" << endl;
+		return -1;
+	}
 	
 	int SPHERE_COUNT = parser.num_spheres;
 	int CUBES_COUNT = parser.num_cubes;
 	int CYLINDER_COUNT = parser.num_cylinders;
 	int SHAPE_COUNT = SPHERE_COUNT + CUBES_COUNT+CYLINDER_COUNT;
 	int NODE_COUNT = 2 * SHAPE_COUNT - 1;
-
-
-	int* parts= new int[4 * (SHAPE_COUNT - 1)];
-	CreateParts(parts, parser.nodes, 0, true, SHAPE_COUNT);
 
 
 	//copy sphere and texture to gpu
@@ -170,10 +141,11 @@ int main() {
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
 
+	printf("parser parts %d\n", parser.parts[0]);
 
 	cudaMemcpy(dev_tree, parser.nodes.data(), NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_parts, parts, 4*(SHAPE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_parts, parser.parts, 4*(SHAPE_COUNT - 1) * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_spheres, spheres, MAX_SHAPES * sizeof(Sphere), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_cubes, cubes, MAX_SHAPES * sizeof(Cube), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_cylinders, cylinders, MAX_SHAPES * sizeof(Cylinder), cudaMemcpyHostToDevice);
