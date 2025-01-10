@@ -212,14 +212,14 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 		if (t1 == 1000)
 		{
 			t1 = d3;
+			N = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
 			
-			N = cylinder.axis;
 		}
 		else
 		{
 			t2 = d3;
+			N2 = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
 			
-			N2 = cylinder.axis;
 		}
 	}
 	if (d4 != 1000)
@@ -227,12 +227,12 @@ __host__ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, con
 		if (t1 == 1000)
 		{
 			t1 = d4;
-			N = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
+			N = cylinder.axis;
 		}
 		else
 		{
 			t2 = d4;
-			N2 = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
+			N2 = cylinder.axis;
 		}
 	}
 

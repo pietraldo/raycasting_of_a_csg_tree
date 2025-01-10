@@ -74,7 +74,7 @@ bool TreeParser::CreateObjects()
 
 				iss >> entry.index >> entry.x >> entry.y >> entry.z >> entry.radius >> entry.height >> entry.axis_x >> entry.axis_y >> entry.axis_z >> entry.r >> entry.g >> entry.b;
 				int index = stoi(entry.index.substr(1, entry.index.find(')')));
-				cylinders[index] = Cylinder{ entry.radius, entry.height, make_float3(entry.x,entry.y,entry.z), make_float3(entry.axis_x,entry.axis_y,entry.axis_z), make_int3(entry.r,entry.g,entry.b) };
+				cylinders[index] = Cylinder{ entry.radius, entry.height, make_float3(entry.x,entry.y,entry.z), NormalizeVector3(make_float3(entry.axis_x,entry.axis_y,entry.axis_z)), make_int3(entry.r,entry.g,entry.b) };
 				num_cylinders++;
 			}
 		}

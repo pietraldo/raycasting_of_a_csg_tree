@@ -9,6 +9,7 @@
 
 #include "cuda_runtime.h"
 
+#include "kernels.cuh"
 #include "Tree.h"
 #include "Constants.h"
 
