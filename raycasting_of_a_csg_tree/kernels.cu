@@ -269,24 +269,6 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 	{
 		int nodeIndex = i;
 
-		if (x == 400 && y == 450)
-		{
-			printf("node: %d\n",i);
-		}
-		for (int i = 0; i < shape_count; i++)
-		{
-			if (x == 400 && y == 450)
-			{
-				printf("%.2f %.2f |", sphereIntersections[2 * i], sphereIntersections[2 * i + 1]);
-			}
-		}
-		if (x == 400 && y == 450)
-		{
-			printf("\n");
-			printf("\n");
-			printf("\n");
-		}
-
 		if (dev_tree[nodeIndex].operation == '-')
 		{
 			int p1 = parts[4 * nodeIndex];
@@ -489,6 +471,10 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 				else
 					sphereIntersections[i] = -1;
 			}
+			for (int i = p2; i <= k2; i++)
+			{
+				sphereIntersections[i] = -1;
+			}
 		}
 
 		else
@@ -581,24 +567,8 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 		}
 
 	}
-	if (x == 400 && y == 450)
-	{
-		printf("end:\n");
-	}
-	for (int i = 0; i < shape_count; i++)
-	{
-		if (x == 400 && y == 450)
-		{
-			printf("%.2f %.2f |", sphereIntersections[2 * i], sphereIntersections[2 * i + 1]);
-		}
-	}
-	if (x == 400 && y == 450)
-	{
-		printf("\n");
-		printf("\n");
-		printf("\n");
-	}
-	dev_intersection_result[x + y * width] = sphereIntersections[0] > 0 ? sphereIntersections[0] : 1000;
+	
+	dev_intersection_result[x + y * width] = (sphereIntersections[0] > 0 && sphereIntersections[1]!=sphereIntersections[0]) ? sphereIntersections[0] : 1000;
 
 }
 
@@ -764,8 +734,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
 
-	if (x == 400 && y == 450)
-		color1 = make_float3(255, 255, 0);
+	
 
 	int index2 = 3 * (y * width + x);
 	dev_texture_data[index2] = (int)color1.x;
