@@ -24,17 +24,14 @@ void Scene::Update()
 
 	if (light.rotateLight)
 	{
-		SetLightPosition(vec3(r * cos(glfwGetTime()), 0, r * sin(glfwGetTime())));
+		angle += light_rotation;
 	}
-	else
-	{
-		SetLightPosition(vec3(r * cos(angle), 0, r * sin(angle)));
-	}
-
+	
+	SetLightPosition(vec3(r * cos(angle), 0, r * sin(angle)));
 
 	if (camera.animation)
 	{
-		camera.yaw += 0.25;
+		camera.yaw += camera_rotation;
 		camera.pitch += camera.cameraDirection * 0.05;
 		if (camera.pitch > 20)
 		{

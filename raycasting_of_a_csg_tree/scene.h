@@ -33,6 +33,8 @@ class Scene
 public:
 
 	float angle = 0;
+	float camera_rotation = 0.25;
+	float light_rotation = 0.03;
 
 	Scene();
 	void SetCamera(Camera camera);

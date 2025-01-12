@@ -29,9 +29,15 @@ GPUdata MallocCopyDataToGPU(TreeParser parser);
 void FreeMemory(GPUdata data);
 
 Scene scene;
-int main() {
-
-	TreeParser parser("C:/Users/pietr/Documents/studia/karty graficzne/csg_model1.txt");
+int main(int argc, char* argv[]) {
+	printf("%s Starting...\n", argv[0]);
+	if (argc < 2)
+	{
+		cout << "Please provide path to the model file" << endl;
+		return -1;
+	}
+	
+	TreeParser parser(argv[1]);
 	if (parser.Parse())
 	{
 		cout << "Parsing successful" << endl;
@@ -154,7 +160,6 @@ GPUdata MallocCopyDataToGPU(TreeParser parser)
 		printf("cudaMalloc dev_tree error: %s\n", cudaGetErrorString(err));
 	}
 
-	printf("parser parts %d\n", parser.parts[0]);
 
 	cudaMemcpy(data.dev_tree, parser.nodes.data(), NODE_COUNT * sizeof(Node), cudaMemcpyHostToDevice);
 	cudaMemcpy(data.dev_texture_data, scene.GetTexture().data.data(), TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyHostToDevice);

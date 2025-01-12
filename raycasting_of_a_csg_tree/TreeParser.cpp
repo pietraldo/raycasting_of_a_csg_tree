@@ -95,6 +95,7 @@ bool TreeParser::CreateObjects()
 
 bool TreeParser::Parse()
 {
+	cout << "Parsing tree. File: " << fileName << endl;
 	if (!CreateObjects())
 	{
 		return false;
