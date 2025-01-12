@@ -170,13 +170,16 @@ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3
 	if (d3 != 1000 && d3 < t2 && d3!=t1)
 	{
 		t2 = d3;
-		N2 = cylinder.axis;
+		N2 = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
 	}
 	if (d4 != 1000 && d4 < t2 && d4 != t1)
 	{
 		t2 = d4;
-		N2 = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
+		N2 = cylinder.axis;
 	}
+
+	if(t2==t1)
+		printf("t2=1000\n");
 
 	return true;
 }
@@ -697,6 +700,10 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 			if (t1 == t || t2 == t)
 			{
+				if (x == 300 && y == 400)
+				{
+					printf("t1=%f, t2=%f\n", t1, t2);
+				}
 				hard_shadow = true;
 				shapeColor = cylinder->color;
 			}
@@ -707,6 +714,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 			}
 			if (t2 == t)
 			{
+				N = N2;
 				intersection = true;
 				break;
 			}
@@ -723,10 +731,17 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
 
+	if (x == 300 && y == 400)
+	{
+		color1 = make_float3(255, 255, 0);
+	}
+
 	int index2 = 3 * (y * width + x);
 	dev_texture_data[index2] = (int)color1.x;
 	dev_texture_data[index2 + 1] = (int)color1.y;
 	dev_texture_data[index2 + 2] = (int)color1.z;
+
+	
 
 	/*if (hard_shadow)
 	{

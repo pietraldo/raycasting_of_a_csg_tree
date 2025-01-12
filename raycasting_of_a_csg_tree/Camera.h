@@ -17,7 +17,7 @@ public:
 	float pitch = 0;
 	float fov = 45;
 
-	float r = 10;
+	float r = 5;
 
 	bool animation = false;
 	bool rotateScene = true;
