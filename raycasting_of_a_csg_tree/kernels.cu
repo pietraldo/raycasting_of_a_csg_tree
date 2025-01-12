@@ -86,30 +86,10 @@ __device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin,
 
 __device__ float3 CalculateNormalVectorCylinder(const Cylinder& cylinder, float3 pixelPosition)
 {
-	float3 a = NormalizeVector3(cylinder.axis);
-
-	float3 v = make_float3(
-		pixelPosition.x,
-		pixelPosition.y,
-		pixelPosition.z
-	);
-
-	// Project v onto the axis to find the closest point on the axis
-	float projection_length = v.x * a.x + v.y * a.y + v.z * a.z;
-	float3 projection2 = make_float3(
-		a.x * projection_length,
-		a.y * projection_length,
-		a.z * projection_length
-	);
-
-	// Compute the vector from the projected point to the surface point
-	float3 normal = make_float3(
-		v.x - projection2.x,
-		v.y - projection2.y,
-		v.z - projection2.z
-	);
-
-	return NormalizeVector3(normal);
+	float t = dot3(make_float3(pixelPosition.x - cylinder.position.x, pixelPosition.y - cylinder.position.y, pixelPosition.z - cylinder.position.z), cylinder.axis);
+	float3 Cp = make_float3(cylinder.position.x + t * cylinder.axis.x, cylinder.position.y + t * cylinder.axis.y, cylinder.position.z + t * cylinder.axis.z);
+	float3 r = make_float3(pixelPosition.x - Cp.x, pixelPosition.y - Cp.y, pixelPosition.z - Cp.z);
+	return NormalizeVector3(r);
 }
 
 __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
@@ -158,72 +138,52 @@ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3
 		d2 = 1000;
 	}
 
-	if (d1 == 1000 && d2 == 1000 && d3==1000 && d4==1000)
+	if (d1 == 1000 && d2 == 1000 && d3 == 1000 && d4 == 1000)
 		return false;
 
 	t1 = 1000;
 	t2 = 1000;
-
 	if (d1 != 1000)
 	{
 		t1 = d1;
 		N = CalculateNormalVectorCylinder(cylinder, make_float3(rayOrigin.x + t1 * rayDirection.x, rayOrigin.y + t1 * rayDirection.y, rayOrigin.z + t1 * rayDirection.z));
 	}
+	if (d3 != 1000 && d3 < t1)
+	{
+		t1 = d3;
+		N = cylinder.axis;
+	}
+	if (d4 != 1000 && d4 < t1)
+	{
+		t1 = d4;
+		N = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
+	}
+
+
+	// finding smallest t2
 	if (d2 != 1000)
 	{
 		t2 = d2;
-		N2 = CalculateNormalVectorCylinder(cylinder, make_float3(rayOrigin.x + t2 * rayDirection.x, rayOrigin.y + t2 * rayDirection.y, rayOrigin.z + t2 * rayDirection.z));
+		N2 = CalculateNormalVectorCylinder(cylinder, make_float3(rayOrigin.x + t1 * rayDirection.x, rayOrigin.y + t1 * rayDirection.y, rayOrigin.z + t1 * rayDirection.z));
 		N2 = make_float3(-N2.x, -N2.y, -N2.z);
-		
 	}
-	if (d3 != 1000)
+	if (d3 != 1000 && d3 < t2 && d3!=t1)
 	{
-		if (t1 == 1000)
-		{
-			t1 = d3;
-			N = cylinder.axis;
-		}
-		else
-		{
-			t2 = d3;
-			N2 = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
-		}
+		t2 = d3;
+		N2 = cylinder.axis;
 	}
-	if (d4 != 1000)
+	if (d4 != 1000 && d4 < t2 && d4 != t1)
 	{
-		if (t1 == 1000)
-		{
-			t1 = d4;
-			N = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
-		}
-		else
-		{
-			t2 = d4;
-			N2 = cylinder.axis;
-		}
+		t2 = d4;
+		N2 = make_float3(-cylinder.axis.x, -cylinder.axis.y, -cylinder.axis.z);
 	}
-
-	
-	if (t1 > t2)
-	{
-		float temp = t1;
-		t1 = t2;
-		t2 = temp;
-		float3 temp2 = N;
-		N = N2;
-		N2 = temp2;
-		N2 = make_float3(-N2.x, -N2.y, -N2.z);
-		
-	}
-	
-	
 
 	return true;
 }
 
 __global__ void CalculateInterscetion(int width, int height, int shape_count, Node* dev_tree,
 	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view,
-	 unsigned char* dev_texture_data, float* light_pos_ptr)
+	unsigned char* dev_texture_data, float* light_pos_ptr)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -270,19 +230,19 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 			float3 spherePosition = make_float3(dev_tree[k].sphere->position.x, dev_tree[k].sphere->position.y, dev_tree[k].sphere->position.z);
 			float radius = dev_tree[k].sphere->radius;
 			IntersectionPointSphere(spherePosition, radius, camera_pos, ray, t1, t2);
-			
+
 		}
-		else if (dev_tree[k].shape==2)
+		else if (dev_tree[k].shape == 2)
 		{
-			
+
 			Cube* cube = dev_tree[k].cube;
-			float3 N,N2;
-			if (!IntersectionPointCube(*cube, camera_pos, ray, t1, t2, N,N2))
+			float3 N, N2;
+			if (!IntersectionPointCube(*cube, camera_pos, ray, t1, t2, N, N2))
 			{
 				t1 = -1;
 				t2 = -1;
 			}
-			
+
 		}
 		else if (dev_tree[k].shape == 3)
 		{
@@ -295,12 +255,12 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 		}
 
 		int m = k - shape_count + 1;
-		
+
 
 		sphereIntersections[2 * m] = t1;
 		sphereIntersections[2 * m + 1] = t2;
 	}
-	
+
 
 	for (int i = shape_count - 2; i >= 0; i--)
 	{
@@ -609,13 +569,13 @@ void UpdateOnGPU(GPUdata& data, int width, int height)
 
 	dim3 grid2(width, height);
 	CalculateInterscetion << <grid, block >> > (width, height, data.ShapeCount, data.dev_tree, data.dev_intersection_result,
-		data.dev_parts, data.dev_camera_position, data.dev_projection, data.dev_view,  data.dev_texture_data, data.dev_light_postion);
+		data.dev_parts, data.dev_camera_position, data.dev_projection, data.dev_view, data.dev_texture_data, data.dev_light_postion);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
-	
+
 
 	ColorPixel << <grid, block >> > (data.dev_texture_data, width, height, data.ShapeCount, data.dev_projection,
 		data.dev_view, data.dev_camera_position, data.dev_light_postion, data.dev_tree, data.dev_intersection_result);
@@ -676,7 +636,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
 	float3 N;
 
-
+	bool hard_shadow = false;
 	bool intersection = false;
 	int3 shapeColor = make_int3(0, 0, 0);
 	for (int k = shape_count - 1; k < 2 * shape_count - 1; k++)
@@ -715,6 +675,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 			if (t1 == t || t2 == t)
 			{
 				shapeColor = cube->color;
+
 			}
 			if (t1 == t)
 			{
@@ -736,6 +697,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 			if (t1 == t || t2 == t)
 			{
+				hard_shadow = true;
 				shapeColor = cylinder->color;
 			}
 			if (t1 == t)
@@ -752,7 +714,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	}
 
 	if (!intersection) return;
-	
+
 
 	float3 lightRay = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
 	float3 L = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
@@ -765,6 +727,13 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	dev_texture_data[index2] = (int)color1.x;
 	dev_texture_data[index2 + 1] = (int)color1.y;
 	dev_texture_data[index2 + 2] = (int)color1.z;
+
+	/*if (hard_shadow)
+	{
+		dev_texture_data[index2] = 255;
+		dev_texture_data[index2 + 1] = 255;
+		dev_texture_data[index2 + 2] = 255;
+	}*/
 }
 
 __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R, const int3& color)
