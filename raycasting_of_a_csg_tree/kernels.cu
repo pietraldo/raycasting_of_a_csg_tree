@@ -178,9 +178,6 @@ __device__ bool IntersectionPointCylinder(const Cylinder& cylinder, const float3
 		N2 = cylinder.axis;
 	}
 
-	if(t2==t1)
-		printf("t2=1000\n");
-
 	return true;
 }
 
@@ -197,7 +194,7 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 
 	float t1 = -1, t2 = -1;
-	const int sphereCount = 256; // TODO: change to sphere_count
+	const int sphereCount = 256; 
 	float sphereIntersections[2 * sphereCount]; // 2 floats for each sphere
 	float tempArray[2 * sphereCount]; // 2 floats for each sphere
 
@@ -262,12 +259,33 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 		sphereIntersections[2 * m] = t1;
 		sphereIntersections[2 * m + 1] = t2;
-	}
 
+		
+	}
+	
+	
 
 	for (int i = shape_count - 2; i >= 0; i--)
 	{
 		int nodeIndex = i;
+
+		if (x == 400 && y == 450)
+		{
+			printf("node: %d\n",i);
+		}
+		for (int i = 0; i < shape_count; i++)
+		{
+			if (x == 400 && y == 450)
+			{
+				printf("%.2f %.2f |", sphereIntersections[2 * i], sphereIntersections[2 * i + 1]);
+			}
+		}
+		if (x == 400 && y == 450)
+		{
+			printf("\n");
+			printf("\n");
+			printf("\n");
+		}
 
 		if (dev_tree[nodeIndex].operation == '-')
 		{
@@ -383,6 +401,10 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 					sphereIntersections[i] = tempArray[i];
 				else
 					sphereIntersections[i] = -1;
+			}
+			for (int i = p2; i <= k2; i++)
+			{
+				sphereIntersections[i] = -1;
 			}
 
 		}
@@ -559,7 +581,23 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 		}
 
 	}
-
+	if (x == 400 && y == 450)
+	{
+		printf("end:\n");
+	}
+	for (int i = 0; i < shape_count; i++)
+	{
+		if (x == 400 && y == 450)
+		{
+			printf("%.2f %.2f |", sphereIntersections[2 * i], sphereIntersections[2 * i + 1]);
+		}
+	}
+	if (x == 400 && y == 450)
+	{
+		printf("\n");
+		printf("\n");
+		printf("\n");
+	}
 	dev_intersection_result[x + y * width] = sphereIntersections[0] > 0 ? sphereIntersections[0] : 1000;
 
 }
@@ -700,11 +738,6 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 			if (t1 == t || t2 == t)
 			{
-				if (x == 300 && y == 400)
-				{
-					printf("t1=%f, t2=%f\n", t1, t2);
-				}
-				hard_shadow = true;
 				shapeColor = cylinder->color;
 			}
 			if (t1 == t)
@@ -731,10 +764,8 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 
 	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
 
-	if (x == 300 && y == 400)
-	{
+	if (x == 400 && y == 450)
 		color1 = make_float3(255, 255, 0);
-	}
 
 	int index2 = 3 * (y * width + x);
 	dev_texture_data[index2] = (int)color1.x;
@@ -742,13 +773,6 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	dev_texture_data[index2 + 2] = (int)color1.z;
 
 	
-
-	/*if (hard_shadow)
-	{
-		dev_texture_data[index2] = 255;
-		dev_texture_data[index2 + 1] = 255;
-		dev_texture_data[index2 + 2] = 255;
-	}*/
 }
 
 __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R, const int3& color)
