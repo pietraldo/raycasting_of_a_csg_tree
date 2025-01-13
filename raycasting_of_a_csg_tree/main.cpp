@@ -190,7 +190,6 @@ float GetTimePassed(float& last) {
 	auto time = glfwGetTime();
 	float dt = time - last;
 	last = time;
-	//std::cout << 1 / dt << std::endl;
 	return dt;
 }
 
