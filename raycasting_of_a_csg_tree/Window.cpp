@@ -136,13 +136,21 @@ void Window::Render(Scene& scene)
 	ImGui::End();
 	ImGui::PopStyleVar();
 
-	ImGui::Begin("Scene settings");
+
+	ImGui::Begin("Light");
 	ImGui::SliderFloat("Light angle", &scene.angle, -2 * 3.14159265, 2 * 3.14159265);
+	ImGui::SliderFloat("ligth height", &scene.GetLight().heightY, -100000, 100000);
+	ImGui::Checkbox("Rotate Light", &scene.GetLight().rotateLight);
+	ImGui::SliderFloat("Light rotation speed", &scene.light_rotation, 0.001, 0.1);
+	ImGui::End();
+	
+	ImGui::SetNextWindowPos(ImVec2(TEXTURE_WIDHT + 10, 0));
+	ImGui::Begin("Camera");
 	ImGui::Checkbox("Change camera view", &scene.GetCamera().rotateScene);
 	ImGui::Checkbox("Rotate Scene", &scene.GetCamera().animation);
-	ImGui::Checkbox("Rotate Light", &scene.GetLight().rotateLight);
 	ImGui::SliderFloat("Camera rotation speed", &scene.camera_rotation, 0.01, 10);
-	ImGui::SliderFloat("Light rotation speed", &scene.light_rotation, 0.001, 0.1);
+	ImGui::SliderFloat("Camera movement speed", &scene.GetCamera().speed, 10, 100);
+	ImGui::SliderFloat("Camera radius", &scene.GetCamera().r, 1, 300);
 	ImGui::End();
 
 

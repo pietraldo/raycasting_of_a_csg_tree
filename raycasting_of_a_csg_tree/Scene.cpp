@@ -20,14 +20,14 @@ Scene::Scene()
 
 void Scene::Update()
 {
-	float r = 100000.0f;
+	float r = 10000.0f;
 
 	if (light.rotateLight)
 	{
 		angle += light_rotation;
 	}
 	
-	SetLightPosition(vec3(r * cos(angle), 0, r * sin(angle)));
+	SetLightPosition(vec3(r * cos(angle), light.heightY, r * sin(angle)));
 
 	if (camera.animation)
 	{
