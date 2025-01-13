@@ -156,7 +156,7 @@ bool TreeParser::Parse()
 		
 		
 		
-		find node with this index
+		//find node with this index
 		ParseNode node;
 		for (int j = 0; j < parse_nodes.size(); j++)
 		{
