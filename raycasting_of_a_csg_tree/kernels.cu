@@ -263,14 +263,7 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 	{
 		int nodeIndex = i;
 
-		if (x == DEBUG_PIXEL_X && y == DEBUG_PIXEL_Y)
-		{ 
-			printf("\n\nNode index: %d\n", nodeIndex);
-			for (int i = 0; i < 2 * shape_count; i += 2)
-			{
-				printf(" %f %f", sphereIntersections[i], sphereIntersections[i + 1]);
-			}
-		}
+		
 
 		if (dev_tree[nodeIndex].operation == '-')
 		{
@@ -573,14 +566,7 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 	}
 
-	if (x == DEBUG_PIXEL_X && y == DEBUG_PIXEL_Y)
-	{
-		printf("\n\nfinal:");
-		for (int i = 0; i < 2 * shape_count; i += 2)
-		{
-			printf(" %f %f", sphereIntersections[i], sphereIntersections[i + 1]);
-		}
-	}
+	
 	dev_intersection_result[x + y * width] = (sphereIntersections[0] > 0 && sphereIntersections[1] != sphereIntersections[0]) ? sphereIntersections[0] : 1000;
 }
 
@@ -628,14 +614,7 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 		dev_texture_data[index2 + 1] = 0;
 		dev_texture_data[index2 + 2] = 0;
 
-		if (x == DEBUG_PIXEL_X && y == DEBUG_PIXEL_Y)
-		{
-			printf(" Not intersected\n");
-			dev_texture_data[index2] = 255;
-			dev_texture_data[index2 + 1] = 250;
-			dev_texture_data[index2 + 2] = 0;
-		}
-
+		
 		return;
 	}
 
@@ -757,13 +736,8 @@ __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int heigh
 	float3 R = NormalizeVector3(make_float3(2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z - L.z));
 
 	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
-	//float3 color1 = make_float3(shapeColor.x, shapeColor.y, shapeColor.z);
-
-	if (x == DEBUG_PIXEL_X && y == DEBUG_PIXEL_Y)
-	{
-		color1 = make_float3(255, 255, 0);
-		//printf("t: %f\n", t);
-	}
+	
+	
 
 	int index2 = 3 * (y * width + x);
 	dev_texture_data[index2] = (int)color1.x;
