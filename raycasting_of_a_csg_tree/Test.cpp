@@ -2,27 +2,34 @@
 
 void Test::test1()
 {
-	const int n = 4;
-	float sphereIntervals[n] = { 1, 2, 2, 4 };
+	const int n = 12;
+	float sphereIntervals[n] = { 80, 81, 1000,1000, -1,-1, 80.5, 87, -1,-1,-1,-1};
 	float temp[n];
-	int p1 = 0;
-	int k1 = 1;
-	int p2 = 2;
-	int k2 = 3;
 
-	std::cout << "before: ";
-	for (int i = 0; i < n; i++)
+	int parts[20] = { 8,9, 10,11, 4, 5,6,7,4,7,8,11,0,1,2,3,0,3,4,11 };
+	for (int i = 0; i < 5; i++)
 	{
-		std::cout << sphereIntervals[i] << " ";
-	}
-	std::cout << std::endl;
+		int p1 = parts[4 * i];
+		int p2 = parts[4 * i + 2];
+		int k1 = parts[4 * i + 1];
+		int k2 = parts[4 * i + 3];
 
-	AddIntervals2(sphereIntervals, temp, p1, p2, k1, k2, false);
+		std::cout << "before: ";
+		for (int j = 0; j < n; j++)
+		{
+			std::cout << sphereIntervals[j] << " ";
+		}
+		std::cout << std::endl;
 
-	std::cout<<"after: ";
-	for (int i = 0; i < n; i++)
-	{
-		std::cout << sphereIntervals[i]<<" ";
+		AddIntervals2(sphereIntervals, temp, p1, p2, k1, k2, false);
+
+		std::cout << "after: ";
+		for (int j = 0; j < n; j++)
+		{
+			std::cout << sphereIntervals[j] << " ";
+		}
+		std::cout << std::endl << std::endl << std::endl;
 	}
-	std::cout << std::endl;
+
+
 }

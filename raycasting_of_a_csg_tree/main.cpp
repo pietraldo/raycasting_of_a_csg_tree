@@ -33,7 +33,7 @@ Scene scene;
 int main(int argc, char* argv[]) {
 
 	Test::test1();
-	return 1;
+	//return 1;
 
 	printf("%s Starting...\n", argv[0]);
 	if (argc < 2)
@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
 		cout << "Parsing failed" << endl;
 		return -1;
 	}
+	
 
 	Window window(SCR_WIDTH, SCR_HEIGHT);
 
