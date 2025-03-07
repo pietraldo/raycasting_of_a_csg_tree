@@ -21,6 +21,7 @@
 #include "TreeParser.h"
 #include "kernels.cuh"
 #include "GPUdata.h"
+#include "Test.h"
 
 float GetTimePassed(float& last);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -30,6 +31,10 @@ void FreeMemory(GPUdata data);
 
 Scene scene;
 int main(int argc, char* argv[]) {
+
+	Test::test1();
+	return 1;
+
 	printf("%s Starting...\n", argv[0]);
 	if (argc < 2)
 	{
