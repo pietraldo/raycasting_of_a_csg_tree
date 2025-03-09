@@ -268,16 +268,6 @@ __host__ __device__ void AddIntervals2(float* sphereIntersections, float* tempAr
 
 	float start = NOT_INTERSECTED;
 
-	if (print)
-	{
-		for (int i = p1; i <= k1; i += 1)
-			printf("%f ", sphereIntersections[i]);
-		printf(" | ");
-		for (int i = p2; i <= k2; i += 1)
-			printf("%f ", sphereIntersections[i]);
-		printf("\n");
-
-	}
 
 	while (true)
 	{
@@ -295,7 +285,7 @@ __host__ __device__ void AddIntervals2(float* sphereIntersections, float* tempAr
 		if (!list1 && !list2) break;
 
 
-
+		// skiping not detected intersections
 		if (list1 && sphereIntersections[list1Index] == NOT_INTERSECTED)
 		{
 			list1Index += 2;
@@ -366,17 +356,6 @@ __host__ __device__ void AddIntervals2(float* sphereIntersections, float* tempAr
 		else
 			sphereIntersections[i] = -1;
 	}
-
-	if (print)
-	{
-		for (int i = p1; i <= k1; i += 1)
-			printf("%f ", sphereIntersections[i]);
-		printf(" | ");
-		for (int i = p2; i <= k2; i += 1)
-			printf("%f ", sphereIntersections[i]);
-		printf("\n\n");
-
-	}
 }
 
 __global__ void CalculateInterscetion(int width, int height, int shape_count, Node* dev_tree,
@@ -394,6 +373,8 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 	float t1 = -1, t2 = -1;
 	const int sphereCount = 256;
 	float sphereIntersections[2 * sphereCount]; // 2 floats for each sphere
+	float sphereIntersectionsCopy[2 * sphereCount]; // 2 floats for each sphere
+	float3 normalVectors[2 * sphereCount]; // 2 floats for each sphere
 	float tempArray[2 * sphereCount]; // 2 floats for each sphere
 
 	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
@@ -423,19 +404,23 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 	for (int k = shape_count - 1; k < 2 * shape_count - 1; k++)
 	{
 		float t1 = -1, t2 = -1;
+		float3 N1, N2;
 		if (dev_tree[k].shape == 1)
 		{
 			float3 spherePosition = make_float3(dev_tree[k].sphere->position.x, dev_tree[k].sphere->position.y, dev_tree[k].sphere->position.z);
 			float radius = dev_tree[k].sphere->radius;
 			IntersectionPointSphere(spherePosition, radius, camera_pos, ray, t1, t2);
 
+			float3 pixelPosition1 = make_float3(camera_pos.x + t1 * ray.x, camera_pos.y + t1 * ray.y, camera_pos.z + t1 * ray.z);
+			float3 pixelPosition2 = make_float3(camera_pos.x + t2 * ray.x, camera_pos.y + t2 * ray.y, camera_pos.z + t2 * ray.z);
+
+			N1 = NormalizeVector3(make_float3(pixelPosition1.x - spherePosition.x, pixelPosition1.y - spherePosition.y, pixelPosition1.z - spherePosition.z));
+			N2 = NormalizeVector3(make_float3(-pixelPosition2.x + spherePosition.x, -pixelPosition2.y + spherePosition.y, -pixelPosition2.z + spherePosition.z));
 		}
 		else if (dev_tree[k].shape == 2)
 		{
-
 			Cube* cube = dev_tree[k].cube;
-			float3 N, N2;
-			if (!IntersectionPointCube(*cube, camera_pos, ray, t1, t2, N, N2))
+			if (!IntersectionPointCube(*cube, camera_pos, ray, t1, t2, N1, N2))
 			{
 				t1 = -1;
 				t2 = -1;
@@ -445,7 +430,8 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 		else if (dev_tree[k].shape == 3)
 		{
 			Cylinder* cylinder = dev_tree[k].cylinder;
-			if (!IntersectionPointCylinder(*cylinder, camera_pos, ray, t1, t2, make_float3(0, 0, 0), make_float3(0, 0, 0)))
+
+			if (!IntersectionPointCylinder(*cylinder, camera_pos, ray, t1, t2, N1, N2))
 			{
 				t1 = -1;
 				t2 = -1;
@@ -457,17 +443,14 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 		sphereIntersections[2 * m] = t1;
 		sphereIntersections[2 * m + 1] = t2;
+		sphereIntersectionsCopy[2 * m] = t1;
+		sphereIntersectionsCopy[2 * m + 1] = t2;
+		normalVectors[2 * m] = N1;
+		normalVectors[2 * m + 1] = N2;
 	}
 
-	if (DEBUG_PIXEL_X == x && DEBUG_PIXEL_Y == y)
-	{
-		for (int i = 0; i < 2 * shape_count; i++)
-		{
-			printf("%f ", sphereIntersections[i]);
-		}
-		printf("\n\n");
-	}
-	
+
+
 
 	for (int i = shape_count - 2; i >= 0; i--)
 	{
@@ -690,7 +673,63 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 	}
 
 
-	dev_intersection_result[x + y * width] = (sphereIntersections[0] > 0 && sphereIntersections[1] != sphereIntersections[0]) ? sphereIntersections[0] : 1000;
+	//dev_intersection_result[x + y * width] = (sphereIntersections[0] > 0 && sphereIntersections[1] != sphereIntersections[0]) ? sphereIntersections[0] : 1000;
+	float t = sphereIntersections[0];
+
+	if (t < 0 || sphereIntersections[0] == sphereIntersections[1])
+	{
+		int index2 = 3 * (y * width + x);
+		dev_texture_data[index2] = 0;
+		dev_texture_data[index2 + 1] = 0;
+		dev_texture_data[index2 + 2] = 0;
+		return;
+	}
+
+	float3 N = make_float3(0, 0, 1);
+	int3 shapeColor = make_int3(0, 0, 0);
+	for (int k = shape_count - 1; k < 2 * shape_count - 1; k++)
+	{
+		int m = k - shape_count + 1;
+		if (t != sphereIntersectionsCopy[2 * m] && t != sphereIntersectionsCopy[2 * m + 1]) continue;
+		
+		if (dev_tree[k].shape == 1)
+		{
+			shapeColor = dev_tree[k].sphere->color;
+		}
+		else if (dev_tree[k].shape == 2)
+		{
+			shapeColor = dev_tree[k].cube->color;
+		}
+		else if (dev_tree[k].shape == 3)
+		{
+			shapeColor = dev_tree[k].cylinder->color;
+		}
+		
+		
+		if (t == sphereIntersectionsCopy[2 * m])
+		{
+			N = normalVectors[2 * m];
+		}
+		else
+		{
+			N = normalVectors[2 * m + 1];
+		}
+	}
+
+	float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
+	float3 lightRay = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
+	float3 L = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
+	float3 V = NormalizeVector3(make_float3(-ray.x, -ray.y, -ray.z));
+	float3 R = NormalizeVector3(make_float3(2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z - L.z));
+
+	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
+
+
+
+	int index2 = 3 * (y * width + x);
+	dev_texture_data[index2] = (int)color1.x;
+	dev_texture_data[index2 + 1] = (int)color1.y;
+	dev_texture_data[index2 + 2] = (int)color1.z;
 }
 
 
@@ -709,13 +748,13 @@ void UpdateOnGPU(GPUdata& data, int width, int height)
 	cudaDeviceSynchronize();
 
 
-	ColorPixel << <grid, block >> > (data.dev_texture_data, width, height, data.ShapeCount, data.dev_projection,
+	/*ColorPixel << <grid, block >> > (data.dev_texture_data, width, height, data.ShapeCount, data.dev_projection,
 		data.dev_view, data.dev_camera_position, data.dev_light_postion, data.dev_tree, data.dev_intersection_result);
 	err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("ColorPixel launch error: %s\n", cudaGetErrorString(err));
 	}
-	cudaDeviceSynchronize();
+	cudaDeviceSynchronize();*/
 }
 
 __global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, int shape_count,
