@@ -11,8 +11,7 @@
 __global__ void CalculateInterscetion(int width, int height, int shape_count, Node* dev_tree, float* dev_intersection_result,
 	int* parts, float* camera_pos_ptr, float* projection, float* view,unsigned char* dev_texture_data, float* light_pos_ptr);
 
-__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, int sphere_count,
-	float* pojection, float* view, float* camera_pos, float* light_pos, Node* dev_tree, float* dev_intersection_result);
+
 
 
 void UpdateOnGPU(GPUdata& data, int width, int height);

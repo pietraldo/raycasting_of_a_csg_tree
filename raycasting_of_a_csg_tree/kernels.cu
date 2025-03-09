@@ -666,14 +666,12 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 		else
 		{
-			//DEBUG_PIXEL_X == x && DEBUG_PIXEL_Y == y
 			AddIntervals2(sphereIntersections, tempArray, p1, p2, k1, k2, false);
 		}
 
 	}
 
 
-	//dev_intersection_result[x + y * width] = (sphereIntersections[0] > 0 && sphereIntersections[1] != sphereIntersections[0]) ? sphereIntersections[0] : 1000;
 	float t = sphereIntersections[0];
 
 	if (t < 0 || sphereIntersections[0] == sphereIntersections[1])
@@ -724,8 +722,6 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
 
-
-
 	int index2 = 3 * (y * width + x);
 	dev_texture_data[index2] = (int)color1.x;
 	dev_texture_data[index2 + 1] = (int)color1.y;
@@ -746,180 +742,8 @@ void UpdateOnGPU(GPUdata& data, int width, int height)
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
-
-
-	/*ColorPixel << <grid, block >> > (data.dev_texture_data, width, height, data.ShapeCount, data.dev_projection,
-		data.dev_view, data.dev_camera_position, data.dev_light_postion, data.dev_tree, data.dev_intersection_result);
-	err = cudaGetLastError();
-	if (err != cudaSuccess) {
-		printf("ColorPixel launch error: %s\n", cudaGetErrorString(err));
-	}
-	cudaDeviceSynchronize();*/
 }
 
-__global__ void ColorPixel(unsigned char* dev_texture_data, int width, int height, int shape_count,
-	float* projection, float* view, float* camera_pos_ptr, float* light_pos_ptr, Node* dev_tree, float* dev_intersection_result)
-{
-	int x = threadIdx.x + blockIdx.x * blockDim.x;
-	int y = threadIdx.y + blockIdx.y * blockDim.y;
-
-
-	if (x >= width || y >= height)
-		return;
-
-	float t = dev_intersection_result[x + y * width];
-
-	if (x == DEBUG_PIXEL_X && y == DEBUG_PIXEL_Y)
-	{
-		int index2 = 3 * (y * width + x);
-		dev_texture_data[index2] = 255;
-		dev_texture_data[index2 + 1] = 0;
-		dev_texture_data[index2 + 2] = 255;
-
-
-		return;
-	}
-
-	if (t == NOT_INTERSECTED)
-	{
-		int index2 = 3 * (y * width + x);
-		dev_texture_data[index2] = 0;
-		dev_texture_data[index2 + 1] = 0;
-		dev_texture_data[index2 + 2] = 0;
-
-
-		return;
-	}
-
-
-
-	float3 camera_pos = make_float3(camera_pos_ptr[0], camera_pos_ptr[1], camera_pos_ptr[2]);
-	float3 light_pos = make_float3(light_pos_ptr[0], light_pos_ptr[1], light_pos_ptr[2]);
-
-	float stepX = 2 / (float)width;
-	float stepY = 2 / (float)height;
-
-	float3 ray = make_float3(-1 + x * stepX, -1 + y * stepY, 1.0f);
-	float4 target = make_float4(ray.x, ray.y, ray.z, 1.0f);
-
-	MultiplyVectorByMatrix4(target, projection);
-	target.x /= target.w;
-	target.y /= target.w;
-	target.z /= target.w;
-	target.w /= target.w;
-
-	target = NormalizeVector4(target);
-	target.w = 0.0f;
-
-	MultiplyVectorByMatrix4(target, view);
-
-	ray.x = target.x;
-	ray.y = target.y;
-	ray.z = target.z;
-
-
-	float3 pixelPosition = make_float3(camera_pos.x + t * ray.x, camera_pos.y + t * ray.y, camera_pos.z + t * ray.z);
-	float3 N;
-
-	bool hard_shadow = false;
-	bool intersection = false;
-	int3 shapeColor = make_int3(0, 0, 0);
-
-
-	for (int k = shape_count - 1; k < 2 * shape_count - 1; k++)
-	{
-		float t1 = -1, t2 = -1;
-
-		if (dev_tree[k].shape == 1)
-		{
-			float3 spherePosition = make_float3(dev_tree[k].sphere->position.x, dev_tree[k].sphere->position.y, dev_tree[k].sphere->position.z);
-			float radius = dev_tree[k].sphere->radius;
-			IntersectionPointSphere(spherePosition, radius, camera_pos, ray, t1, t2);
-
-			if (t1 == t || t2 == t)
-			{
-				shapeColor = dev_tree[k].sphere->color;
-			}
-			if (t1 == t)
-			{
-				intersection = true;
-				N = NormalizeVector3(make_float3(pixelPosition.x - spherePosition.x, pixelPosition.y - spherePosition.y, pixelPosition.z - spherePosition.z));
-				break;
-			}
-			if (t2 == t)
-			{
-				intersection = true;
-				N = NormalizeVector3(make_float3(-pixelPosition.x + spherePosition.x, -pixelPosition.y + spherePosition.y, -pixelPosition.z + spherePosition.z));
-				break;
-			}
-		}
-		else if (dev_tree[k].shape == 2)
-		{
-			Cube* cube = dev_tree[k].cube;
-			float3 N2;
-			if (!IntersectionPointCube(*cube, camera_pos, ray, t1, t2, N, N2)) continue;
-
-			if (t1 == t || t2 == t)
-			{
-				shapeColor = cube->color;
-
-			}
-			if (t1 == t)
-			{
-				intersection = true;
-				break;
-			}
-			if (t2 == t)
-			{
-				intersection = true;
-				N = N2;
-				break;
-			}
-		}
-		else if (dev_tree[k].shape == 3)
-		{
-			Cylinder* cylinder = dev_tree[k].cylinder;
-			float3 N2;
-			if (!IntersectionPointCylinder(*cylinder, camera_pos, ray, t1, t2, N, N2)) continue;
-
-			if (t1 == t || t2 == t)
-			{
-				shapeColor = cylinder->color;
-				shapeColor = make_int3(255, 0, 0);
-			}
-			if (t1 == t)
-			{
-				intersection = true;
-				break;
-			}
-			if (t2 == t)
-			{
-				N = N2;
-				intersection = true;
-				break;
-			}
-		}
-	}
-
-	if (!intersection) return;
-
-
-	float3 lightRay = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
-	float3 L = NormalizeVector3(make_float3(light_pos.x - pixelPosition.x, light_pos.y - pixelPosition.y, light_pos.z - pixelPosition.z));
-	float3 V = NormalizeVector3(make_float3(-ray.x, -ray.y, -ray.z));
-	float3 R = NormalizeVector3(make_float3(2.0f * dot3(L, N) * N.x - L.x, 2.0f * dot3(L, N) * N.y - L.y, 2.0f * dot3(L, N) * N.z - L.z));
-
-	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
-
-
-
-	int index2 = 3 * (y * width + x);
-	dev_texture_data[index2] = (int)color1.x;
-	dev_texture_data[index2 + 1] = (int)color1.y;
-	dev_texture_data[index2 + 2] = (int)color1.z;
-
-
-}
 
 __device__ float3 CalculateColor(const  float3& N, const  float3& L, const  float3& V, const  float3& R, const int3& color)
 {

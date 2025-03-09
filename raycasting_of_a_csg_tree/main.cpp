@@ -32,7 +32,7 @@ void FreeMemory(GPUdata data);
 Scene scene;
 int main(int argc, char* argv[]) {
 
-	Test::test1();
+	//Test::test1();
 	//return 1;
 
 	printf("%s Starting...\n", argv[0]);
