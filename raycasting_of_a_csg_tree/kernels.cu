@@ -358,6 +358,203 @@ __host__ __device__ void AddIntervals2(float* sphereIntersections, float* tempAr
 	}
 }
 
+
+__host__ __device__ void SubstractIntervals(float* sphereIntersections, float* tempArray, int p1, int p2, int k1, int k2, bool print)
+{
+	int list1Index = p1;
+	int list2Index = p2;
+	int addIndex = p1;
+
+
+	float start1 = sphereIntersections[list1Index];
+	float end1 = sphereIntersections[list1Index + 1];
+	float start2 = sphereIntersections[list2Index];
+	float end2 = sphereIntersections[list2Index + 1];
+	while (list1Index <= k1 && list2Index <= k2)
+	{
+		if (sphereIntersections[list1Index] == -1 || sphereIntersections[list2Index] == -1) // one of the lists just ended
+		{
+			break;
+		}
+
+		if (start1 < start2)
+		{
+			if (end1 < start2) // przedzaily sie nie nakladaja
+			{
+				tempArray[addIndex] = start1;
+				tempArray[addIndex + 1] = end1;
+				addIndex += 2;
+
+				list1Index += 2;
+				start1 = sphereIntersections[list1Index];
+				end1 = sphereIntersections[list1Index + 1];
+			}
+			else
+			{
+				if (end1 < end2) // usuwa cala koncowke przedzialu
+				{
+					tempArray[addIndex] = start1;
+					tempArray[addIndex + 1] = start2;
+
+					addIndex += 2;
+					list1Index += 2;
+					start1 = sphereIntersections[list1Index];
+					end1 = sphereIntersections[list1Index + 1];
+				}
+				else // wycina przedzial w srodku
+				{
+					tempArray[addIndex] = start1;
+					tempArray[addIndex + 1] = start2;
+
+					addIndex += 2;
+
+					start1 = end2;
+
+					list2Index += 2;
+					start2 = sphereIntersections[list2Index];
+					end2 = sphereIntersections[list2Index + 1];
+				}
+			}
+
+		}
+		else
+		{
+			if (end2 < start1) // brak przeciecia
+			{
+				list2Index += 2;
+				start2 = sphereIntersections[list2Index];
+				end2 = sphereIntersections[list2Index + 1];
+			}
+			else
+			{
+				if (end2 > end1) // usuwa caly przedzial
+				{
+					list1Index += 2;
+					start1 = sphereIntersections[list1Index];
+					end1 = sphereIntersections[list1Index + 1];
+				}
+				else // usuwa poczatek przedzialu
+				{
+					start1 = end2;
+
+					list2Index += 2;
+					start2 = sphereIntersections[list2Index];
+					end2 = sphereIntersections[list2Index + 1];
+				}
+			}
+		}
+	}
+
+
+
+	if (list2Index > k2 || sphereIntersections[list2Index] == -1)
+	{
+		if (start1 != end1)
+		{
+			tempArray[addIndex] = start1;
+			tempArray[addIndex + 1] = end1;
+			addIndex += 2;
+		}
+		list1Index += 2;
+
+		while (list1Index <= k1 && sphereIntersections[list1Index] != -1)
+		{
+			tempArray[addIndex] = sphereIntersections[list1Index];
+			tempArray[addIndex + 1] = sphereIntersections[list1Index + 1];
+			addIndex += 2;
+			list1Index += 2;
+		}
+	}
+
+
+
+	for (int i = p1; i <= k2; i++)
+	{
+		if (i < addIndex)
+			sphereIntersections[i] = tempArray[i];
+		else
+			sphereIntersections[i] = -1;
+	}
+
+}
+__host__ __device__ void CommonPartIntervals(float* sphereIntersections, float* tempArray, int p1, int p2, int k1, int k2, bool print)
+{
+	int list1Index = p1;
+	int list2Index = p2;
+	int addIndex = p1;
+
+	while (list1Index < k1 && list2Index < k2)
+	{
+		if (sphereIntersections[list1Index] == -1 || sphereIntersections[list2Index] == -1) // one of the lists just ended
+		{
+			break;
+		}
+
+		float start1 = sphereIntersections[list1Index];
+		float end1 = sphereIntersections[list1Index + 1];
+		float start2 = sphereIntersections[list2Index];
+		float end2 = sphereIntersections[list2Index + 1];
+
+		if (start1 < start2)
+		{
+			if (end1 < start2)
+			{
+				list1Index += 2;
+			}
+			else
+			{
+
+				if (end1 < end2)
+				{
+					tempArray[addIndex] = start2;
+					tempArray[addIndex + 1] = end1;
+					addIndex += 2;
+					list1Index += 2;
+				}
+				else
+				{
+					tempArray[addIndex] = start2;
+					tempArray[addIndex + 1] = end2;
+					addIndex += 2;
+					list2Index += 2;
+				}
+			}
+		}
+		else
+		{
+			if (end2 < start1)
+			{
+				list2Index += 2;
+			}
+			else
+			{
+				if (end2 < end1)
+				{
+					tempArray[addIndex] = start1;
+					tempArray[addIndex + 1] = end2;
+					addIndex += 2;
+					list2Index += 2;
+				}
+				else
+				{
+					tempArray[addIndex] = start1;
+					tempArray[addIndex + 1] = end1;
+					addIndex += 2;
+					list1Index += 2;
+				}
+			}
+		}
+	}
+	for (int i = p1; i <= k2; i++)
+	{
+		if (i < addIndex)
+			sphereIntersections[i] = tempArray[i];
+		else
+			sphereIntersections[i] = -1;
+	}
+	
+}
+
 __global__ void CalculateInterscetion(int width, int height, int shape_count, Node* dev_tree,
 	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view,
 	unsigned char* dev_texture_data, float* light_pos_ptr)
@@ -456,6 +653,8 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 	{
 		int nodeIndex = i;
 
+		
+
 		//punkty znajduja sie w lewym od indeksu a do b, w prawym od c do d
 		int p1 = parts[4 * nodeIndex];
 		int k1 = parts[4 * nodeIndex + 1];
@@ -463,205 +662,27 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 		int k2 = parts[4 * nodeIndex + 3];
 
 
+		if (DEBUG_PIXEL_X == x && DEBUG_PIXEL_Y == y)
+		{
+			printf("Node %d\n", nodeIndex);
+			printf("Operation: %c, p1: %d k1: %d p2: %d k2: %d\n", dev_tree[nodeIndex].operation, p1, k1, p2, k2);
+			for (int i = 0; i < 2 * shape_count - 1; i++)
+			{
+				printf("%f %f ", sphereIntersections[2 * i], sphereIntersections[2 * i + 1]);
+			}
+			printf("\n");
+			printf("\n");
+		}
+
+
 		if (dev_tree[nodeIndex].operation == '-')
 		{
-			int list1Index = p1;
-			int list2Index = p2;
-			int addIndex = p1;
-
-
-			float start1 = sphereIntersections[list1Index];
-			float end1 = sphereIntersections[list1Index + 1];
-			float start2 = sphereIntersections[list2Index];
-			float end2 = sphereIntersections[list2Index + 1];
-			while (list1Index <= k1 && list2Index <= k2)
-			{
-				if (sphereIntersections[list1Index] == -1 || sphereIntersections[list2Index] == -1) // one of the lists just ended
-				{
-					break;
-				}
-
-				if (start1 < start2)
-				{
-					if (end1 < start2) // przedzaily sie nie nakladaja
-					{
-						tempArray[addIndex] = start1;
-						tempArray[addIndex + 1] = end1;
-						addIndex += 2;
-
-						list1Index += 2;
-						start1 = sphereIntersections[list1Index];
-						end1 = sphereIntersections[list1Index + 1];
-					}
-					else
-					{
-						if (end1 < end2) // usuwa cala koncowke przedzialu
-						{
-							tempArray[addIndex] = start1;
-							tempArray[addIndex + 1] = start2;
-
-							addIndex += 2;
-							list1Index += 2;
-							start1 = sphereIntersections[list1Index];
-							end1 = sphereIntersections[list1Index + 1];
-						}
-						else // wycina przedzial w srodku
-						{
-							tempArray[addIndex] = start1;
-							tempArray[addIndex + 1] = start2;
-
-							addIndex += 2;
-
-							start1 = end2;
-
-							list2Index += 2;
-							start2 = sphereIntersections[list2Index];
-							end2 = sphereIntersections[list2Index + 1];
-						}
-					}
-
-				}
-				else
-				{
-					if (end2 < start1) // brak przeciecia
-					{
-						list2Index += 2;
-						start2 = sphereIntersections[list2Index];
-						end2 = sphereIntersections[list2Index + 1];
-					}
-					else
-					{
-						if (end2 > end1) // usuwa caly przedzial
-						{
-							list1Index += 2;
-							start1 = sphereIntersections[list1Index];
-							end1 = sphereIntersections[list1Index + 1];
-						}
-						else // usuwa poczatek przedzialu
-						{
-							start1 = end2;
-
-							list2Index += 2;
-							start2 = sphereIntersections[list2Index];
-							end2 = sphereIntersections[list2Index + 1];
-						}
-					}
-				}
-			}
-
-
-
-			if (list2Index > k2 || sphereIntersections[list2Index] == -1)
-			{
-				if (start1 != end1)
-				{
-					tempArray[addIndex] = start1;
-					tempArray[addIndex + 1] = end1;
-					addIndex += 2;
-				}
-				list1Index += 2;
-
-				while (list1Index <= k1 && sphereIntersections[list1Index] != -1)
-				{
-					tempArray[addIndex] = sphereIntersections[list1Index];
-					tempArray[addIndex + 1] = sphereIntersections[list1Index + 1];
-					addIndex += 2;
-					list1Index += 2;
-				}
-			}
-
-
-
-			for (int i = p1; i <= k2; i++)
-			{
-				if (i < addIndex)
-					sphereIntersections[i] = tempArray[i];
-				else
-					sphereIntersections[i] = -1;
-			}
-
-
+			SubstractIntervals(sphereIntersections, tempArray, p1, p2, k1, k2, false);
 		}
 
 		else if (dev_tree[nodeIndex].operation == '*')
 		{
-			int list1Index = p1;
-			int list2Index = p2;
-			int addIndex = p1;
-
-			while (list1Index < k1 && list2Index < k2)
-			{
-				if (sphereIntersections[list1Index] == -1 || sphereIntersections[list2Index] == -1) // one of the lists just ended
-				{
-					break;
-				}
-
-				float start1 = sphereIntersections[list1Index];
-				float end1 = sphereIntersections[list1Index + 1];
-				float start2 = sphereIntersections[list2Index];
-				float end2 = sphereIntersections[list2Index + 1];
-
-				if (start1 < start2)
-				{
-					if (end1 < start2)
-					{
-						list1Index += 2;
-					}
-					else
-					{
-
-						if (end1 < end2)
-						{
-							tempArray[addIndex] = start2;
-							tempArray[addIndex + 1] = end1;
-							addIndex += 2;
-							list1Index += 2;
-						}
-						else
-						{
-							tempArray[addIndex] = start2;
-							tempArray[addIndex + 1] = end2;
-							addIndex += 2;
-							list2Index += 2;
-						}
-					}
-				}
-				else
-				{
-					if (end2 < start1)
-					{
-						list2Index += 2;
-					}
-					else
-					{
-						if (end2 < end1)
-						{
-							tempArray[addIndex] = start1;
-							tempArray[addIndex + 1] = end2;
-							addIndex += 2;
-							list2Index += 2;
-						}
-						else
-						{
-							tempArray[addIndex] = start1;
-							tempArray[addIndex + 1] = end1;
-							addIndex += 2;
-							list1Index += 2;
-						}
-					}
-				}
-			}
-			for (int i = p1; i <= k1; i++)
-			{
-				if (i < addIndex)
-					sphereIntersections[i] = tempArray[i];
-				else
-					sphereIntersections[i] = -1;
-			}
-			for (int i = p2; i <= k2; i++)
-			{
-				sphereIntersections[i] = -1;
-			}
+			CommonPartIntervals(sphereIntersections, tempArray, p1, p2, k1, k2, false);
 		}
 
 		else
@@ -670,9 +691,21 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 		}
 
 	}
-
+	
+	
 
 	float t = sphereIntersections[0];
+
+	if (DEBUG_PIXEL_X == x && DEBUG_PIXEL_Y == y)
+	{
+		
+		int index2 = 3 * (y * width + x);
+		dev_texture_data[index2] = 255;
+		dev_texture_data[index2 + 1] = 255;
+		dev_texture_data[index2 + 2] = 0;
+		return;
+	}
+
 
 	if (t < 0 || sphereIntersections[0] == sphereIntersections[1])
 	{
@@ -680,6 +713,7 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 		dev_texture_data[index2] = 0;
 		dev_texture_data[index2 + 1] = 0;
 		dev_texture_data[index2 + 2] = 0;
+
 		return;
 	}
 

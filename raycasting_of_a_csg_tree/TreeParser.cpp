@@ -218,6 +218,7 @@ bool TreeParser::Parse()
 		else
 		{
 			int shapeIdx = indexes[i][0] == 's' ? 1 : 2;
+			shapeIdx = indexes[i][0] == 'w' ? 3 : shapeIdx;
 			node = Node{ -1, -1, -1, shapeIdx, nullptr, nullptr,nullptr, 0 };
 		}
 		nodes.push_back(node);
