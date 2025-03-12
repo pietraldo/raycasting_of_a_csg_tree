@@ -116,7 +116,7 @@ void Window::ProccessMouse(Scene& scene, float dt)
 	
 }
 
-void Window::Render(Scene& scene)
+void Window::Render(Scene& scene, float dt)
 {
 	// Start ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
@@ -151,6 +151,7 @@ void Window::Render(Scene& scene)
 	ImGui::SliderFloat("Camera rotation speed", &scene.camera_rotation, 0.01, 10);
 	ImGui::SliderFloat("Camera movement speed", &scene.GetCamera().speed, 10, 100);
 	ImGui::SliderFloat("Camera radius", &scene.GetCamera().r, 1, 300);
+	ImGui::Text("Fps: %f", 1 / dt);
 	ImGui::End();
 
 

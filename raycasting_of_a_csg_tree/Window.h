@@ -22,7 +22,7 @@ private:
 
 public:
 	Window(const int width, const int height);
-	void Render(Scene& scene);
+	void Render(Scene& scene, float dt);
 	void ProccessInput(Scene& scene, float dt);
 	bool ShouldCloseWindow();
 	GLFWwindow* GetWindow() { return window; }

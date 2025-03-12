@@ -32,7 +32,7 @@ void FreeMemory(GPUdata data);
 Scene scene;
 int main(int argc, char* argv[]) {
 
-	//Test::test2();
+	//Test::test3();
 	//return 1;
 
 	printf("%s Starting...\n", argv[0]);
@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXTURE_WIDHT, TEXTURE_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, scene.GetTexture().data.data());
 
 		window.ClearScreen();
-		window.Render(scene);
+		window.Render(scene,dt);
 
 		
 	}
