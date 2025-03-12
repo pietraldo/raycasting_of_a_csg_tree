@@ -2,8 +2,8 @@
 
 #define NOT_INTERSECTED -1
 
-#define DEBUG_PIXEL_X 300
-#define DEBUG_PIXEL_Y 300
+#define DEBUG_PIXEL_X 600
+#define DEBUG_PIXEL_Y 200
 
 
 __device__ bool IntersectionPointCube(const Cube& cube, const float3& rayOrigin, const float3& rayDirection, float& t1, float& t2, float3& N, float3& N2)
@@ -249,6 +249,87 @@ __host__ __device__ void AddIntervals(float* sphereIntersections, float* tempArr
 			sphereIntersections[i] = -1;
 	}*/
 }
+
+__device__ void AddIntervals3(float* sphereIntersections, float* tempArray, int p1, int p2, int k1, int k2, bool print)
+{
+	// merging two lists into tempArray sorted by start time
+	int list1Index = p1;
+	int list2Index = p2;
+	int tempIndex = p1;
+	while (list1Index < k1 && list2Index < k2)
+	{
+		if (sphereIntersections[list1Index] == -1 || sphereIntersections[list2Index] == -1) // one of the lists just ended
+		{
+			break;
+		}
+
+		if (sphereIntersections[list2Index] < sphereIntersections[list1Index])
+		{
+			tempArray[tempIndex] = sphereIntersections[list2Index];
+			tempArray[tempIndex + 1] = sphereIntersections[list2Index + 1];
+			list2Index += 2;
+		}
+		else
+		{
+			tempArray[tempIndex] = sphereIntersections[list1Index];
+			tempArray[tempIndex + 1] = sphereIntersections[list1Index + 1];
+			list1Index += 2;
+		}
+		tempIndex += 2;
+	}
+	while (list1Index < k1 && sphereIntersections[list1Index] != -1)
+	{
+		tempArray[tempIndex] = sphereIntersections[list1Index];
+		tempArray[tempIndex + 1] = sphereIntersections[list1Index + 1];
+		list1Index += 2;
+		tempIndex += 2;
+	}
+	while (list2Index < k2 && sphereIntersections[list2Index] != -1)
+	{
+		tempArray[tempIndex] = sphereIntersections[list2Index];
+		tempArray[tempIndex + 1] = sphereIntersections[list2Index + 1];
+		list2Index += 2;
+		tempIndex += 2;
+	}
+
+
+
+	// merging tempArray into sphereIntersections
+	if (tempIndex != p1) //if something changed
+	{
+		float start = tempArray[p1];
+		float end = tempArray[p1 + 1];
+		int addIndex = p1;
+		for (int i = p1 + 2; i <= tempIndex - 2; i += 2)
+		{
+			float currentStart = tempArray[i];
+			float currentEnd = tempArray[i + 1];
+			if (currentStart > end)
+			{
+				sphereIntersections[addIndex] = start;
+				sphereIntersections[addIndex + 1] = end;
+				addIndex += 2;
+				start = currentStart;
+				end = currentEnd;
+			}
+			else
+			{
+				if (currentEnd > end)
+					end = currentEnd;
+			}
+		}
+		sphereIntersections[addIndex] = start;
+		sphereIntersections[addIndex + 1] = end;
+		addIndex += 2;
+
+
+		for (int i = addIndex; i <= k2; i++)
+		{
+			sphereIntersections[i] = -1;
+		}
+	}
+}
+
 
 __host__ __device__ void AddIntervals2(float* sphereIntersections, float* tempArray, int p1, int p2, int k1, int k2, bool print)
 {
@@ -561,8 +642,6 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 	if (x >= width || y >= height)
 		return;
 
-
-	float t1 = -1, t2 = -1;
 	const int sphereCount = 256;
 	float shapeIntersection1[2 * sphereCount]; // 2 floats for each shape
 	float shapeIntersection2[2 * sphereCount]; // 2 floats for each shape
@@ -665,12 +744,12 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 		/*if (DEBUG_PIXEL_X == x && DEBUG_PIXEL_Y == y)
 		{
-			printf("Node %d\n", i);
+			printf("Node %d before\n", i);
 			for (int i = 0; i < 2 * shape_count; i++)
-				printf("%f ", shapeIntersection1[i]);
+				printf("%f ", shapeIntersections[i]);
 			printf("\n");
 			for (int i = 0; i < 2 * shape_count; i++)
-				printf("%f ", shapeIntersection2[i]);
+				printf("%f ", tempArray[i]);
 			printf("\n");
 			printf("p1: %d k1: %d p2: %d k2: %d\n", p1, k1, p2, k2);
 			printf("%d\n", shapeIntersections);
@@ -689,15 +768,32 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 		else
 		{
-			AddIntervals(shapeIntersections, tempArray, p1, p2, k1, k2, false);
+			AddIntervals3(shapeIntersections, tempArray, p1, p2, k1, k2, false);
 		}
 
-		if (p1 == 0) // switch arrays
+		/*if (DEBUG_PIXEL_X == x && DEBUG_PIXEL_Y == y)
 		{
-			float* temp = shapeIntersections;
-			shapeIntersections = tempArray;
-			tempArray = temp;
-		}
+			printf("Node %d after\n", i);
+			for (int i = 0; i < 2 * shape_count; i++)
+				printf("%f ", shapeIntersections[i]);
+			printf("\n");
+			for (int i = 0; i < 2 * shape_count; i++)
+				printf("%f ", tempArray[i]);
+			printf("\n");
+			printf("p1: %d k1: %d p2: %d k2: %d\n", p1, k1, p2, k2);
+			printf("%d\n", shapeIntersections);
+			printf("\n");
+			printf("\n");
+			printf("\n");
+			printf("\n");
+		}*/
+
+		//if (p1 == 0) // switch arrays
+		//{
+		//	float* temp = shapeIntersections;
+		//	shapeIntersections = tempArray;
+		//	tempArray = temp;
+		//}
 	}
 	
 
