@@ -2,6 +2,8 @@
 #include <cuda.h>
 #include <device_launch_parameters.h>
 #include <cuda_runtime.h>
+#include <glad/glad.h>
+#include <cuda_gl_interop.h>
 
 #include <iostream>
 #include "Tree.h"

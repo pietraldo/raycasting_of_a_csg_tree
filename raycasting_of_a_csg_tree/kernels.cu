@@ -634,14 +634,18 @@ __host__ __device__ void CommonPartIntervals(float* sphereIntersections, float* 
 
 }
 
+__device__ void SurfaceSetPixelColor(cudaSurfaceObject_t surface, size_t x, size_t y)
+{
+	uint32_t bytes = 128 << 24 | 0 << 16 | 255 << 8 | 128;
 
+	surf2Dwrite(bytes, surface, x * sizeof(uint32_t), y, cudaBoundaryModeZero);
+}
 __global__ void CalculateInterscetion(int width, int height, int shape_count, Node* dev_tree,
 	float* dev_intersection_result, int* parts, float* camera_pos_ptr, float* projection, float* view,
-	unsigned char* dev_texture_data, float* light_pos_ptr)
+	unsigned char* dev_texture_data, float* light_pos_ptr, cudaSurfaceObject_t surface)
 {
 	int x = threadIdx.x + blockIdx.x * blockDim.x;
 	int y = threadIdx.y + blockIdx.y * blockDim.y;
-
 
 	if (x >= width || y >= height)
 		return;
@@ -816,11 +820,7 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 	if (t < 0 || shapeIntersections[0] == shapeIntersections[1])
 	{
-		int index2 = 3 * (y * width + x);
-		dev_texture_data[index2] = 0;
-		dev_texture_data[index2 + 1] = 0;
-		dev_texture_data[index2 + 2] = 0;
-
+		surf2Dwrite(0, surface, x * sizeof(uint32_t), y, cudaBoundaryModeZero);
 		return;
 	}
 
@@ -863,10 +863,10 @@ __global__ void CalculateInterscetion(int width, int height, int shape_count, No
 
 	float3 color1 = CalculateColor(N, L, V, R, shapeColor);
 
-	int index2 = 3 * (y * width + x);
-	dev_texture_data[index2] = (int)color1.x;
-	dev_texture_data[index2 + 1] = (int)color1.y;
-	dev_texture_data[index2 + 2] = (int)color1.z;
+	int3 color = make_int3(color1.x, color1.y, color1.z);
+
+	uint32_t bytes = 0 << 24 | color.z << 16 | color.y << 8 | color.x;
+	surf2Dwrite(bytes, surface, x * sizeof(uint32_t), y, cudaBoundaryModeZero);
 }
 
 
@@ -877,12 +877,14 @@ void UpdateOnGPU(GPUdata& data, int width, int height)
 
 	dim3 grid2(width, height);
 	CalculateInterscetion << <grid, block >> > (width, height, data.ShapeCount, data.dev_tree, data.dev_intersection_result,
-		data.dev_parts, data.dev_camera_position, data.dev_projection, data.dev_view, data.dev_texture_data, data.dev_light_postion);
+		data.dev_parts, data.dev_camera_position, data.dev_projection, data.dev_view, data.dev_texture_data, data.dev_light_postion,data.surface);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("CalculateInterscetion launch error: %s\n", cudaGetErrorString(err));
 	}
 	cudaDeviceSynchronize();
+
+	
 }
 
 

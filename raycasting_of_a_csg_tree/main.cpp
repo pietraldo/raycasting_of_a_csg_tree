@@ -8,7 +8,11 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
 
+#include <cstdint>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
@@ -67,6 +71,28 @@ int main(int argc, char* argv[]) {
 
 	GPUdata gpuData = MallocCopyDataToGPU(parser);
 
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDHT, TEXTURE_HEIGHT,
+		0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); 
+
+	cudaSurfaceObject_t m_Surface;
+	cudaGraphicsResource_t m_TextureResource;
+
+	cudaGraphicsGLRegisterImage(&m_TextureResource, scene.GetTexture().id, GL_TEXTURE_2D,
+		cudaGraphicsRegisterFlagsSurfaceLoadStore); 
+	cudaGraphicsMapResources(1, &m_TextureResource); 
+
+	cudaArray* array;
+	cudaGraphicsSubResourceGetMappedArray(&array, m_TextureResource, 0, 0);
+
+	cudaResourceDesc desc;
+	memset(&desc, 0, sizeof(cudaResourceDesc));
+	desc.resType = cudaResourceTypeArray;
+	desc.res.array.array = array;
+
+	cudaCreateSurfaceObject(&m_Surface, &desc);
+	gpuData.surface = m_Surface;
+
 	float last = glfwGetTime();
 	while (!window.ShouldCloseWindow()) {
 
@@ -80,11 +106,11 @@ int main(int argc, char* argv[]) {
 		
 
 		// copy texture to cpu
-		cudaMemcpy(scene.GetTexture().data.data(), gpuData.dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+		//cudaMemcpy(scene.GetTexture().data.data(), gpuData.dev_texture_data, TEXTURE_WIDHT * TEXTURE_HEIGHT * 3 * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
 		// copy to opengl
-		glBindTexture(GL_TEXTURE_2D, scene.GetTexture().id);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXTURE_WIDHT, TEXTURE_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, scene.GetTexture().data.data());
+		//glBindTexture(GL_TEXTURE_2D, scene.GetTexture().id);
+		//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXTURE_WIDHT, TEXTURE_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, scene.GetTexture().data.data());
 
 		window.ClearScreen();
 		window.Render(scene,dt);

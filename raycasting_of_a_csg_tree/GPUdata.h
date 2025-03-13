@@ -16,4 +16,5 @@ struct GPUdata
 	Cylinder* dev_cylinders;
 	float* dev_intersection_result;
 	int ShapeCount;
+	cudaSurfaceObject_t surface;
 };
