@@ -12,6 +12,8 @@
 #include "kernels.cuh"
 #include "Tree.h"
 #include "Constants.h"
+#include "CSGTree.h"
+#include "Primitives.h"
 
 using namespace std;
 
@@ -75,6 +77,10 @@ class TreeParser
 	string fileName;
 
 	bool CreateObjects();
+	bool CreateObjects2();
+
+	string TreeParser::GetType(int type);
+	string TreeParser::GetTypeOperation(int type);
 public:
 	int num_spheres = 0;
 	int num_cubes = 0;
@@ -98,6 +104,7 @@ public:
 	
 	void AttachShapes(Cube* dev_cubes, Sphere* dev_spheres, Cylinder* dev_cylinders);
 	bool Parse();
+	bool Parse2();
 	void CreateParts(int node = 0);
 };
 

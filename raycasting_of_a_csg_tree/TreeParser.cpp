@@ -92,11 +92,123 @@ bool TreeParser::CreateObjects()
 
 	return num_spheres + num_cubes +num_cylinders== num_nodes + 1;
 }
+string TreeParser::GetType(int type)
+{
+	switch (type)
+	{
+	case CSGTree::NodeType::Cube:
+		return "c";
+	case CSGTree::NodeType::Sphere:
+		return "s";
+	case CSGTree::NodeType::Cylinder:
+		return "w";
+	case CSGTree::NodeType::Union:
+		return "t";
+	case CSGTree::NodeType::Difference:
+		return "t";
+	case CSGTree::NodeType::Intersection:
+		return "t";
+	}
+	return "";
+}
+string TreeParser::GetTypeOperation(int type)
+{
+	switch (type)
+	{
+	case CSGTree::NodeType::Difference:
+		return "-";
+	case CSGTree::NodeType::Union:
+		return "+";
+	case CSGTree::NodeType::Intersection:
+		return "*";
+	}
+	return "";
+}
+bool TreeParser::CreateObjects2()
+{
+	std::ifstream inputStream(fileName.c_str(), std::ios::in);
+	if (!inputStream.is_open())
+	{
+		throw std::runtime_error("File not found, or couldn't be open");
+	}
+
+	std::stringstream buffer;
+	buffer << inputStream.rdbuf();
+	inputStream.close();
+	CSGTree tree = CSGTree::Parse(buffer.str());
+	for (int i = 0; i < tree.nodes.size(); i++)
+	{
+		CSGNode node = tree.nodes[i];
+		if (GetType(node.type) == "t")
+		{
+			ParseNode entry;
+			entry.indexStr = "t" + to_string(i);
+			entry.left = GetType(tree.nodes[node.left].type) + to_string(node.left);
+			entry.right = GetType(tree.nodes[node.right].type) + to_string(node.right);
+			entry.operation = GetTypeOperation(node.type);
+			entry.index = i;
+			
+			parse_nodes.push_back(entry);
+			num_nodes++;
+		}
+		else if (GetType(node.type) == "c")
+		{
+			Primitive primitive = tree.primitives.primitives[node.primitiveIdx];
+
+			float x = primitive.x;
+			float y = primitive.y;
+			float z = primitive.z;
+			float width = primitive.params.cubeParameters.size;
+			float height = primitive.params.cubeParameters.size;
+			float depth = primitive.params.cubeParameters.size;
+			int r = primitive.r* 255;
+			int g = primitive.g * 255;
+			int b = primitive.b * 255;
+			int index = i;
+
+			cubes[index] = Cube{
+				make_float3(x, y, z),
+				make_float3(x + width, y, z),
+				make_float3(x + width, y, z + depth),
+				make_float3(x, y, z + depth),
+				make_float3(x, y + height, z),
+				make_float3(x + width, y + height, z),
+				make_float3(x + width, y + height, z + depth),
+				make_float3(x, y + height, z + depth),
+				make_int3(r, g, b) };
+			num_cubes++;
+		}
+		else if (GetType(node.type) == "s")
+		{
+			Primitive primitive = tree.primitives.primitives[node.primitiveIdx];
+			int r = primitive.r * 255;
+			int g = primitive.g * 255;
+			int b = primitive.b * 255;
+			
+			int index = i;
+			spheres[index] = Sphere{ primitive.params.sphereParameters.radius, make_float3(primitive.x,primitive.y,primitive.z), make_int3(r,g,b) };
+			num_spheres++;
+		}
+		else if (GetType(node.type) == "w")
+		{
+			Primitive primitive = tree.primitives.primitives[node.primitiveIdx];
+			int r = primitive.r * 255;
+			int g = primitive.g * 255;
+			int b = primitive.b * 255;
+			int index = i;
+			cylinders[index] = Cylinder{ primitive.params.cylinderParameters.radius, primitive.params.cylinderParameters.height, make_float3(primitive.x,primitive.y,primitive.z), NormalizeVector3(make_float3(primitive.params.cylinderParameters.axisX,primitive.params.cylinderParameters.axisY,primitive.params.cylinderParameters.axisZ)), make_int3(r,g,b) };
+			num_cylinders++;
+		}
+	}
+	ShapeCount = num_spheres + num_cubes + num_cylinders;
+	parts = new int[4 * (ShapeCount - 1)];
+	return num_spheres + num_cubes + num_cylinders == num_nodes + 1;
+}
 
 bool TreeParser::Parse()
 {
 	cout << "Parsing tree. File: " << fileName << endl;
-	if (!CreateObjects())
+	if (!CreateObjects2())
 	{
 		return false;
 	}
@@ -150,11 +262,6 @@ bool TreeParser::Parse()
 			continue;
 		}
 		indexes.push_back(index);
-		
-
-		
-		
-		
 		
 		//find node with this index
 		ParseNode node;
@@ -237,6 +344,42 @@ bool TreeParser::Parse()
 	CreateParts();
 
 	return true;
+}
+
+bool TreeParser::Parse2()
+{
+	CSGTree tree = CSGTree::Parse(fileName);
+	CSGNode root = tree.nodes[0];
+
+	vector<CSGNode> indexes = vector<CSGNode>();
+	vector<CSGNode> children = vector<CSGNode>();
+	stack<CSGNode> stack;
+	stack.push(root);
+
+	int i = 0;
+	while (!stack.empty())
+	{
+		CSGNode node = stack.top();
+		stack.pop();
+
+		if (node.type == CSGTree::NodeType::Cube || node.type == CSGTree::NodeType::Sphere || node.type == CSGTree::NodeType::Cylinder)
+		{
+			children.push_back(node);
+			continue;
+		}
+		indexes.push_back(node);
+
+		stack.push(tree.nodes[node.right]);
+		stack.push(tree.nodes[node.left]);
+
+		i++;
+	}
+
+	for (int i = 0; i < children.size(); i++)
+	{
+		indexes.push_back(children[i]);
+	}
+	return false;
 }
 
 void TreeParser::AttachShapes(Cube* dev_cubes, Sphere* dev_spheres, Cylinder* dev_cylinders)
